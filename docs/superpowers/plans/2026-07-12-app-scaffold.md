@@ -515,9 +515,9 @@ export default function SignupPage() {
 Create `src/app/(dashboard)/dashboard/page.tsx`:
 
 ```tsx
-import Home from "@/app/page";
-
-export default Home;
+export default function DashboardPage() {
+  return <main>대시보드 준비 중</main>;
+}
 ```
 
 - [ ] **Step 3: Create planned module boundaries**
