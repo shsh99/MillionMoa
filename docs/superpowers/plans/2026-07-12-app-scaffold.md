@@ -474,6 +474,8 @@ git commit -m "feat: add goal timeline calculator"
 ## Task 4: Route And Module Boundaries
 
 **Files:**
+- Create: `src/app/layout.tsx`
+- Create: `src/app/globals.css`
 - Create: `src/app/(auth)/login/page.tsx`
 - Create: `src/app/(auth)/signup/page.tsx`
 - Create: `src/app/(dashboard)/dashboard/page.tsx`
@@ -520,21 +522,52 @@ export default function DashboardPage() {
 }
 ```
 
-- [ ] **Step 3: Create planned module boundaries**
+- [ ] **Step 3: Create minimum app root**
+
+Create `src/app/globals.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Create `src/app/layout.tsx`:
+
+```tsx
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "MillionMoa",
+  description: "월급으로 1억까지, 가장 빠른 설계",
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="ko">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+- [ ] **Step 4: Create planned module boundaries**
 
 Create empty `.gitkeep` files in every feature and library boundary listed in this task. These keep future work from mixing calculator, auth, DB, UI, and policy concerns.
 
-- [ ] **Step 4: Verify route boundary typecheck**
+- [ ] **Step 5: Verify route boundary typecheck and build**
 
 Run:
 
 ```bash
 npm run typecheck
+npm run build
 ```
 
-Expected: typecheck passes.
+Expected: typecheck and production build pass.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/app src/features src/lib
@@ -544,9 +577,8 @@ git commit -m "chore: add app module boundaries"
 ## Task 5: App Shell And Dashboard Placeholder
 
 **Files:**
-- Create: `src/app/layout.tsx`
 - Create: `src/app/page.tsx`
-- Create: `src/app/globals.css`
+- Modify: `src/app/globals.css`
 - Create: `src/components/app-shell.tsx`
 - Create: `src/features/dashboard/dashboard-overview.tsx`
 - Create: `src/features/dashboard/dashboard-overview.test.tsx`
@@ -617,9 +649,9 @@ export function DashboardOverview() {
 }
 ```
 
-- [ ] **Step 4: Create app files**
+- [ ] **Step 4: Update app files**
 
-Create `src/app/globals.css`:
+Update `src/app/globals.css`:
 
 ```css
 @tailwind base;
@@ -663,25 +695,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 ```
 
-Create `src/app/layout.tsx`:
-
-```tsx
-import type { Metadata } from "next";
-import "./globals.css";
-
-export const metadata: Metadata = {
-  title: "MillionMoa",
-  description: "월급으로 1억까지, 가장 빠른 설계",
-};
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="ko">
-      <body>{children}</body>
-    </html>
-  );
-}
-```
+Keep `src/app/layout.tsx` metadata and Korean `lang` root layout from Task 4.
 
 Create `src/app/page.tsx`:
 
