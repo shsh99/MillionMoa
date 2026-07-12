@@ -11,6 +11,12 @@ const eslintConfig = [
       "@next/next/no-html-link-for-pages": "off"
     }
   },
+  {
+    files: ["next-env.d.ts"],
+    rules: {
+      "@typescript-eslint/triple-slash-reference": "off"
+    }
+  },
   { ignores: [".next/**", "node_modules/**", "coverage/**"] }
 ];
 
