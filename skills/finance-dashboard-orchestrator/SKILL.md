@@ -1,6 +1,6 @@
 ---
 name: finance-dashboard-orchestrator
-description: "사회초년생 재무 대시보드 프로젝트의 관리자 오케스트레이터. 1억 목표, 월급/세금/실수령, 연말정산 환급, 세액공제, 중소기업 취업자 소득세 감면, ISA/IRP/CMA/적금/투자, 성과급/여유자금 운용, 배당금, 가계부, 대시보드, 구현 계획, 리서치, 보완, 재실행, 업데이트, QA 요청 시 반드시 사용한다."
+description: "사회초년생 재무 대시보드 프로젝트의 관리자 오케스트레이터. 1억 최단경로, 월급 통장 쪼개기, 월급/세금/실수령, 연말정산 환급, 세액공제, 중소기업 취업자 소득세 감면, ISA/IRP/CMA/파킹통장/적금/투자, 성과급/여유자금 운용, 배당금, 가계부, 대시보드, 구현 계획, 리서치, 보완, 재실행, 업데이트, QA 요청 시 반드시 사용한다."
 ---
 
 # Finance Dashboard Orchestrator
@@ -45,6 +45,7 @@ Common task routing:
 - Current policy or rates: finance-policy-analyst.
 - Feature scope or roadmap: product-architect.
 - Formula, edge case, or test matrix: calculation-engineer.
+- Fastest path to 100 million KRW, paycheck splitting, parking/CMA interest, or living-expense buckets: product-architect + calculation-engineer + backend-data-engineer.
 - Year-end tax refund, tax credit, tax reduction, surplus cash, or dividend logic: finance-policy-analyst + calculation-engineer.
 - Database/auth/API design: backend-data-engineer.
 - Screen/component/chart design: frontend-ux-engineer.

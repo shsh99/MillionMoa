@@ -18,3 +18,4 @@
 | 2026-07-12 | Added privacy and financial safety reviewer | agents/privacy-safety-reviewer.md, finance-dashboard-orchestrator | Separate privacy/data exposure and investment-advice wording review |
 | 2026-07-12 | Added tax settlement and surplus cash planning scope | design spec, policy/calculation/orchestrator skills | Support year-end refund, tax credits, small-business reduction, bonuses, surplus cash, and dividend projections |
 | 2026-07-12 | Added Git branch strategy | AGENTS.md | Use main/dev/feat workflow for project work |
+| 2026-07-12 | Added fastest-path planning scope | design spec, orchestrator/calculation skills | Combine salary surplus, account splitting, tax refunds, ISA/IRP, interest, dividends, and bonuses into shortest 100 million KRW scenarios |

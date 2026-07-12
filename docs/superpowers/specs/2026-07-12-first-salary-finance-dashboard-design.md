@@ -46,12 +46,30 @@ The product should reduce confusion by turning many inputs into a small number o
 - Months shortened or delayed by changing spending and contribution assumptions
 - Estimated year-end refund or additional tax payment
 - Suggested allocation scenarios for surplus cash, framed as simulations rather than advice
+- Total acceleration amount from interest, dividends, tax refund, tax credits, bonus income, and reduced spending
+- Fastest estimated path to the 100 million KRW goal under user-selected constraints
 
 ## Product Approach
 
 The selected approach is a goal-centered MVP with a comprehensive dashboard interface.
 
 The app will include the major areas users expect from an all-in-one finance service, but every area should connect back to the asset goal. This keeps the product coherent while still allowing salary calculation, account planning, cash management, and household ledger features to exist from the first version.
+
+The core product engine is the 100 million KRW acceleration planner. It should aggregate every source of additional money or saved money that can shorten the goal timeline:
+
+- monthly investable surplus from salary,
+- unused living expense budget,
+- parking account and CMA interest,
+- savings deposit interest,
+- ISA tax savings and investment return,
+- pension savings and IRP tax credit,
+- small-business employee income tax reduction,
+- year-end tax refund,
+- performance bonus and other one-time income,
+- dividends and reinvested dividends,
+- spending reductions by category.
+
+The planner should not output one deterministic "best investment." It should output ranked scenarios based on user constraints such as liquidity need, risk level, tax-credit capacity, account contribution limits, and emergency fund target.
 
 ## Core User Flow
 
@@ -150,7 +168,80 @@ Outputs:
 
 The simulator should support the default 100 million KRW goal and custom goals.
 
-### 4. Year-End Tax Settlement Planner
+### 4. Fastest Path Planner
+
+This screen turns the whole app into an actionable 100 million KRW plan. It combines salary surplus, account allocation, tax refund, tax credits, bonuses, interest, dividends, and spending changes into ranked scenarios.
+
+Inputs:
+
+- Current assets
+- Monthly investable surplus
+- Current account balances
+- Account contribution limits
+- Emergency fund target
+- Liquidity requirement
+- Risk preference
+- Expected annual return by account
+- Parking account/CMA interest rules
+- Expected dividend income
+- Expected bonus or surplus events
+- Expected year-end refund or additional payment
+- Remaining pension savings/IRP tax credit capacity
+- ISA contribution capacity and tax-saving assumptions
+- Budget category reduction candidates
+
+Outputs:
+
+- Fastest estimated date to 100 million KRW
+- Base plan using current behavior
+- Optimized scenario using user-selected constraints
+- Timeline improvement from each source:
+  - spending reduction
+  - parking/CMA interest
+  - savings deposit interest
+  - ISA tax saving and return
+  - pension/IRP tax credit
+  - small-business income tax reduction
+  - tax refund
+  - bonus
+  - dividends
+- Contribution order for the current month
+- Warning when a scenario uses illiquid retirement accounts, high-risk return assumptions, or unverified tax eligibility
+- Explanation of why each scenario is faster, framed as simulation rather than advice
+
+Scenario examples:
+
+- Conservative: emergency fund first, parking/CMA and savings deposits, limited investment risk.
+- Balanced: emergency fund target, ISA contribution, pension/IRP tax-credit capacity, general investment.
+- Aggressive: lower cash buffer and higher expected return assumptions, clearly marked as higher risk.
+- Tax-first: pension/IRP and eligible tax benefits prioritized before general investment.
+
+### 5. Account Flow Planner
+
+This screen models money movement from salary to buckets and accounts.
+
+Inputs:
+
+- Payday
+- Monthly take-home pay
+- Fixed-cost account
+- Living-expense account
+- Emergency fund/CMA account
+- Savings deposit account
+- ISA account
+- pension savings/IRP account
+- general investment account
+- month-end sweep rule for remaining cash
+
+Outputs:
+
+- Monthly account split
+- Amount left unassigned
+- Cash flow warnings
+- Estimated impact on the 100 million KRW target
+- Month-end leftover transfer scenario
+
+### 6. Year-End Tax Settlement Planner
 
 This screen estimates whether the user may receive a refund or owe additional tax at year end. It should be framed as a planning estimate, not an official filing calculation.
 
@@ -175,7 +266,7 @@ Outputs:
 - Small-business employee income tax reduction estimate
 - Warning when user-entered values require official Hometax verification
 
-### 5. Tax-Advantaged Account Planner
+### 7. Tax-Advantaged Account Planner
 
 This screen compares tax effects across account types.
 
@@ -193,7 +284,7 @@ Outputs:
 - Liquidity warning for retirement accounts
 - Rule version and source label
 
-### 6. Bonus And Surplus Cash Simulator
+### 8. Bonus And Surplus Cash Simulator
 
 This screen helps users compare how to allocate performance bonuses, tax refunds, cash gifts, or other surplus money.
 
@@ -213,7 +304,7 @@ Outputs:
 - Estimated tax effect where applicable
 - Liquidity and risk labels
 
-### 7. Dividend And Income Projection
+### 9. Dividend And Income Projection
 
 This screen estimates passive income from user-entered holdings or account-level dividend yield assumptions.
 
@@ -233,7 +324,7 @@ Outputs:
 - After-tax dividend estimate
 - Reinvested dividend impact on goal timeline
 
-### 8. Account And Product Management
+### 10. Account And Product Management
 
 Users can create account records for:
 
@@ -257,7 +348,7 @@ Each account should store:
 - Dividend yield
 - Liquidity purpose, such as living expenses, emergency fund, long-term investment, or retirement.
 
-### 9. Living Expense Management
+### 11. Living Expense Management
 
 This screen manages practical monthly cash flow.
 
@@ -272,7 +363,7 @@ Features:
 
 The goal is to help the user separate spending money from long-term investing money.
 
-### 10. Household Ledger
+### 12. Household Ledger
 
 The first version uses manual entry only.
 
@@ -292,7 +383,7 @@ Outputs:
 - Spending by category
 - Remaining monthly budget
 
-### 11. Reports
+### 13. Reports
 
 Reports show changes over time.
 
@@ -307,6 +398,8 @@ Charts:
 - Tax benefit by category
 - Bonus and surplus cash usage
 - Dividend and interest income trend
+- Fastest path scenario trend
+- Timeline improvement by source
 
 ## Data Model
 
@@ -552,6 +645,59 @@ Fields:
 - createdAt
 - updatedAt
 
+### FastestPathScenario
+
+Stores a ranked scenario for reaching the primary asset goal as quickly as possible within user-selected constraints.
+
+Fields:
+
+- id
+- userId
+- goalId
+- name
+- scenarioType
+- liquidityRequirement
+- riskLevel
+- emergencyFundTarget
+- startingAssets
+- monthlySalarySurplus
+- monthlySpendingReduction
+- monthlyInterestIncome
+- monthlyDividendIncome
+- monthlyTaxBenefitValue
+- oneTimeBonusAmount
+- oneTimeTaxRefundAmount
+- isaContribution
+- pensionOrIrpContribution
+- generalInvestmentContribution
+- savingsDepositContribution
+- cmaOrParkingContribution
+- estimatedGoalDate
+- estimatedMonthsToGoal
+- monthsReducedVsBase
+- assumptionsSummary
+- warnings
+- createdAt
+- updatedAt
+
+### AccelerationContribution
+
+Stores how much each source contributes to shortening the 100 million KRW timeline in a scenario.
+
+Fields:
+
+- id
+- scenarioId
+- sourceType
+- sourceName
+- amount
+- frequency
+- estimatedAnnualValue
+- estimatedMonthsReduced
+- confidence
+- createdAt
+- updatedAt
+
 ### DividendHolding
 
 Stores user-entered dividend assumptions.
@@ -647,6 +793,8 @@ Required calculators:
 - Bonus cash flow calculator: estimates bonus withholding, net bonus cash, and year-end reconciliation impact separately.
 - Surplus cash allocation calculator: compares one-time bonus/refund/cash allocation scenarios and resulting goal timeline change.
 - Dividend income calculator: estimates gross, after-tax, and reinvested dividend impact and warns when financial income may require additional tax review.
+- Fastest path optimizer: ranks user-controlled scenarios by estimated months to goal while respecting liquidity, risk, contribution limits, tax eligibility, and emergency fund constraints.
+- Acceleration attribution calculator: decomposes goal timeline improvement by source so users can see which actions shorten the path most.
 
 The tax-benefit estimator should be conservative and clearly labeled as an estimate. The product should avoid presenting tax calculations as official tax advice.
 
@@ -687,12 +835,16 @@ Recommended module boundaries:
 - `features/dashboard`: dashboard-specific components and queries
 - `features/profile`: salary and financial profile forms
 - `features/simulator`: goal and scenario simulator
+- `features/fastest-path`: ranked 100 million KRW acceleration scenarios
+- `features/paycheck-planner`: salary-to-account flow and monthly bucket allocation
 - `features/accounts`: account and product management
 - `features/tax-planner`: year-end tax settlement, tax credits, reductions, and tax-advantaged account effects
 - `features/surplus`: bonus, refund, dividend, and surplus cash allocation scenarios
 - `features/ledger`: household ledger
 - `features/reports`: charts and monthly reports
 - `lib/calculators`: pure financial calculation functions
+- `lib/calculators/fastest-path`: scenario ranking and acceleration attribution
+- `lib/calculators/cash-allocation`: salary split, cash buckets, and sweep rules
 - `lib/policies`: versioned policy configuration and lookup helpers
 - `lib/db`: database client and query helpers
 - `lib/auth`: authentication configuration
@@ -707,6 +859,7 @@ Calculators should be pure functions with unit tests. UI components should call 
 - Mark estimates as estimates.
 - Do not call ISA benefits "tax credit" unless the calculation is specifically an eligible ISA-to-pension transfer credit.
 - Do not present allocation scenarios as personalized investment advice.
+- Do not present the "fastest" scenario as universally best. Fastest only means fastest under the user's selected constraints and assumptions.
 - Do not equate tax credit amount with refund amount. Refund or additional payment is calculated from final determined tax compared with tax already withheld.
 - Keep bonus withholding and year-end final tax settlement visibly separate.
 - Show liquidity warnings for IRP and pension accounts.
@@ -744,6 +897,8 @@ Calculators should be pure functions with unit tests. UI components should call 
 - Implement small-business employee income tax reduction calculator.
 - Implement year-end refund/additional-payment estimator.
 - Implement bonus cash flow, surplus cash, and dividend income calculators.
+- Implement fastest path optimizer and acceleration attribution calculator.
+- Implement salary-to-account allocation and month-end sweep calculators.
 - Add unit tests for calculators.
 
 ### Phase 4: Accounts And Allocation
@@ -751,10 +906,14 @@ Calculators should be pure functions with unit tests. UI components should call 
 - Add account CRUD.
 - Support CMA, parking account, savings deposit, ISA, IRP, general investment, and manual account types.
 - Calculate weighted expected return and monthly contribution total.
+- Add cash bucket and paycheck allocation CRUD.
+- Add parking/CMA interest rules for simple and tiered rates.
 
 ### Phase 5: Living Expense And Ledger
 
 - Add living expense management.
+- Add category-level living expense budgets.
+- Add month-end leftover cash sweep scenarios.
 - Add manual income and expense entries.
 - Add category totals and monthly budget state.
 
@@ -788,10 +947,14 @@ Calculators should be pure functions with unit tests. UI components should call 
   - Pension savings and IRP contribution above credit limit
   - Year-end refund capped by tax withheld unless refundable credit exists
   - Bonus withholding differs from year-end final tax
-  - Bonus allocated to illiquid retirement accounts
-  - Dividend yield of zero, negative, or unusually high values
+- Bonus allocated to illiquid retirement accounts
+- Dividend yield of zero, negative, or unusually high values
+- Fastest path scenario violates liquidity requirement
+- Scenario contribution total exceeds income or account contribution limits
+- Same tax benefit counted twice as both refund and monthly value
+- Month-end leftover cash counted before it exists
 - Add integration tests for user-scoped CRUD operations.
-- Add basic end-to-end tests for signup, profile setup, account creation, ledger entry, dashboard calculation, year-end refund estimate, and surplus allocation scenario.
+- Add basic end-to-end tests for signup, profile setup, account creation, paycheck allocation, ledger entry, dashboard calculation, year-end refund estimate, fastest path scenario, and surplus allocation scenario.
 
 ## Product Decisions For First Release
 
@@ -803,6 +966,8 @@ Calculators should be pure functions with unit tests. UI components should call 
 - Treat ordinary ISA as a tax-saving account, not a tax-credit account. Only eligible ISA maturity transfer into pension accounts should appear in tax credit logic.
 - Include small-business employee income tax reduction as an estimate with eligibility questions and annual cap handling.
 - Include bonus, refund, and surplus cash allocation as scenario comparison, not as investment recommendation.
+- Make the fastest path planner the central planning workflow. Other calculators feed into it rather than living as isolated tools.
+- Require scenario constraints for fastest-path calculations: liquidity, risk level, emergency fund target, tax eligibility, and account contribution limits.
 
 ## Acceptance Criteria
 
@@ -818,6 +983,9 @@ Calculators should be pure functions with unit tests. UI components should call 
 - The app estimates small-business employee income tax reduction for eligible users.
 - The app compares surplus cash allocation scenarios and shows goal timeline impact.
 - The app estimates gross and after-tax dividend income from user-entered assumptions.
+- The app ranks at least three 100 million KRW path scenarios and shows estimated months reduced versus the user's current behavior.
+- The app shows which source, such as spending reduction, tax refund, bonus, interest, or dividend, contributed to the timeline improvement.
+- The app prevents a fastest-path scenario from double-counting the same tax benefit or surplus cash event.
 - The user can record manual income and expenses.
 - The report screen shows at least one monthly asset or cash flow chart.
 - All core calculators have unit tests.

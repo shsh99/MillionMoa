@@ -1,6 +1,6 @@
 ---
 name: finance-calculation-design
-description: "실수령액, 4대보험, 소득세, 연말정산 환급/추가납부, 중소기업 취업자 소득세 감면, 저축률, 월복리, 1억 달성 기간, ISA 절세, 연금저축/IRP 세액공제, CMA 생활비, 적금/투자 수익률, 성과급/여유자금 운용, 배당금 계산 로직을 설계하거나 구현할 때 반드시 사용한다."
+description: "실수령액, 4대보험, 소득세, 연말정산 환급/추가납부, 중소기업 취업자 소득세 감면, 저축률, 월복리, 1억 최단경로, 1억 달성 기간, 월급 통장 쪼개기, 파킹통장/CMA 이자, ISA 절세, 연금저축/IRP 세액공제, 생활비 예산, 적금/투자 수익률, 성과급/여유자금 운용, 배당금 계산 로직을 설계하거나 구현할 때 반드시 사용한다."
 ---
 
 # Finance Calculation Design
@@ -23,6 +23,10 @@ description: "실수령액, 4대보험, 소득세, 연말정산 환급/추가납
 - `isaToPensionTransferCreditCalculator`: additional tax credit estimate for eligible ISA maturity transfer to pension accounts.
 - `surplusCashAllocationCalculator`: bonus, refund, and spare cash allocation scenario comparison.
 - `dividendProjectionCalculator`: gross, after-tax, and reinvested dividend projection.
+- `fastestPathOptimizer`: ranked scenarios for reaching 100 million KRW fastest under user constraints.
+- `accelerationAttributionCalculator`: timeline improvement by source such as tax refund, interest, dividends, bonus, spending cuts, and account allocation.
+- `cashBucketAllocator`: salary split into fixed costs, living expense, emergency fund, savings, ISA, IRP, and investment buckets.
+- `parkingInterestCalculator`: gross and after-tax parking/CMA interest using simple, daily, monthly, or tiered-rate assumptions.
 
 ## Standard Inputs
 
@@ -53,6 +57,9 @@ Every calculator must define behavior for:
 - small-business reduction period expired,
 - bonus allocated to a restricted or illiquid account,
 - dividend yield missing, zero, negative, or unusually high.
+- fastest-path scenario double-counts tax benefits or surplus cash,
+- scenario violates user liquidity or emergency-fund constraints,
+- parking/CMA interest uses end balance when average balance is required.
 
 ## Tax Benefit Separation
 
