@@ -667,29 +667,51 @@ body {
   background: #f7f5ef;
   color: #17201a;
 }
+
+:focus-visible {
+  outline: 2px solid #2f7d62;
+  outline-offset: 3px;
+}
 ```
 
 Create `src/components/app-shell.tsx`:
 
 ```tsx
+import Link from "next/link";
 import type { ReactNode } from "react";
 
-const navItems = ["대시보드", "월급 설계", "목표 시뮬레이터", "절세 플래너", "가계부", "리포트"];
+const navItems = [
+  { label: "대시보드", href: "/" },
+  { label: "월급 설계", href: "/dashboard" },
+  { label: "목표 시뮬레이터", href: "/dashboard" },
+  { label: "절세 플래너", href: "/dashboard" },
+  { label: "가계부", href: "/dashboard" },
+  { label: "리포트", href: "/dashboard" },
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-paper">
+      <a className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:text-ink" href="#main-content">
+        본문으로 건너뛰기
+      </a>
       <header className="border-b border-ink/10 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="font-semibold text-ink">MillionMoa</div>
+          <Link className="font-semibold text-ink" href="/">
+            MillionMoa
+          </Link>
           <nav aria-label="Primary" className="hidden gap-5 text-sm text-ink/70 md:flex">
             {navItems.map((item) => (
-              <span key={item}>{item}</span>
+              <Link className="transition-colors hover:text-ink" href={item.href} key={item.label}>
+                {item.label}
+              </Link>
             ))}
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-6 py-8" id="main-content">
+        {children}
+      </main>
     </div>
   );
 }
