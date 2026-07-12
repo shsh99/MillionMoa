@@ -148,6 +148,8 @@ npm run dev
 
 ## Verification
 
+After the remaining scaffold tasks add the TypeScript, ESLint, test, and app route configuration, use this suite for full project verification:
+
 ```bash
 npm run lint
 npm run typecheck
