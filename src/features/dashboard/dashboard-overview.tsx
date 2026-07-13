@@ -1,3 +1,5 @@
+import { GoalQuickPlanner } from "./goal-quick-planner";
+
 const metrics = [
   { label: "현재 자산", value: "0원", caption: "연동 전" },
   { label: "예상 달성일", value: "입력 필요", caption: "월 저축액 입력 필요" },
@@ -6,16 +8,16 @@ const metrics = [
 ];
 
 const actions = [
-  "월급 입금일 기준으로 생활비, 저축, 투자 통장을 먼저 나눕니다.",
-  "연금저축/IRP 세액공제 한도를 채운 뒤 남는 돈을 ISA 후보로 보냅니다.",
-  "성과급은 비상금 3개월치를 제외하고 목표 단축 시뮬레이션에 반영합니다.",
+  "월급 입금일 기준으로 생활비, 저축, 투자 통장 배분안을 비교합니다.",
+  "연금저축/IRP 세액공제 한도와 ISA 납입 여력을 함께 확인합니다.",
+  "성과급은 사용자가 설정한 비상금 기준을 반영해 목표 단축 시나리오로 비교합니다.",
 ];
 
 const investmentCandidates = [
-  { name: "ISA", detail: "중개형 ISA로 배당/ETF 수익을 분리 관리" },
-  { name: "IRP", detail: "연말정산 환급 예상액을 다시 납입" },
-  { name: "적금", detail: "고정 저축 습관을 만드는 기본 축" },
-  { name: "배당", detail: "분기 배당금은 목표 계좌로 자동 재투자" },
+  { name: "ISA", detail: "중개형 ISA의 세제 효과와 수익 가정을 분리해 비교" },
+  { name: "IRP", detail: "연말정산 추정 금액 재배분 시나리오" },
+  { name: "적금", detail: "고정 저축액을 유지하는 기준 시나리오" },
+  { name: "배당", detail: "배당금 재투자 가정 시나리오" },
 ];
 
 export function DashboardOverview() {
@@ -60,10 +62,11 @@ export function DashboardOverview() {
               </p>
             </div>
             <div className="border-l border-[#f2d27b] pl-4">
-              <p className="text-sm font-semibold text-[#725b12]">세액공제 예상 환급</p>
+              <p className="text-sm font-semibold text-[#725b12]">연말정산 추정 영향</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-[#17201a]">0원</p>
               <p className="mt-2 text-sm leading-6 text-[#6f6547]">
-                IRP와 연금저축 납입액을 넣으면 연말정산 환급 후보를 보여줍니다.
+                IRP와 연금저축 납입액, 원천징수액을 함께 입력하면 예상 환급 또는
+                추가 납부 가능성을 추정합니다. 실제 결과는 홈택스에서 확인해야 합니다.
               </p>
             </div>
           </div>
@@ -86,9 +89,13 @@ export function DashboardOverview() {
       </div>
 
       <div className="grid gap-5">
+        <GoalQuickPlanner />
+
         <aside className="rounded-lg border border-[#ded8cb] bg-[#fffdf8] p-5">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-base font-semibold text-[#17201a]">이번 달 추천 액션</h2>
+            <h2 className="text-base font-semibold text-[#17201a]">
+              이번 달 시뮬레이션 후보
+            </h2>
             <span className="rounded-md bg-[#e6f3eb] px-2 py-1 text-xs font-semibold text-[#2f7d62]">
               3개
             </span>
@@ -125,7 +132,7 @@ export function DashboardOverview() {
 
         <aside className="rounded-lg border border-[#d9e3d7] bg-[#eef7f1] p-5">
           <h2 className="text-base font-semibold text-[#17201a]">
-            ISA/IRP/적금/배당 재투자 후보
+            ISA/IRP/적금/배당 비교 시나리오
           </h2>
           <div className="mt-4 divide-y divide-[#d4e4d8]">
             {investmentCandidates.map((candidate) => (

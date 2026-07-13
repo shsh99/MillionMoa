@@ -32,6 +32,29 @@ describe("calculateMonthsToGoal", () => {
         monthlyContribution: 0,
         annualReturnRate: 0,
       }),
-    ).toEqual({ months: null, reached: false });
+    ).toEqual({ months: null, reached: false, reason: "no-progress" });
+  });
+
+  it("rejects annual return rates outside the simple model bounds", () => {
+    expect(
+      calculateMonthsToGoal({
+        currentAmount: 10_000_000,
+        goalAmount: 100_000_000,
+        monthlyContribution: 1_000_000,
+        annualReturnRate: -25,
+      }),
+    ).toEqual({ months: null, reached: false, reason: "invalid-return-rate" });
+  });
+
+  it("marks goals as outside the model horizon when max months are exceeded", () => {
+    expect(
+      calculateMonthsToGoal({
+        currentAmount: 10_000_000,
+        goalAmount: 100_000_000,
+        monthlyContribution: 1,
+        annualReturnRate: 0,
+        maxMonths: 12,
+      }),
+    ).toEqual({ months: null, reached: false, reason: "max-months-exceeded" });
   });
 });

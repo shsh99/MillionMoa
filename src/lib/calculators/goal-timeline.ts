@@ -9,17 +9,22 @@ export type GoalTimelineInput = {
 export type GoalTimelineResult = {
   months: number | null;
   reached: boolean;
+  reason?: "invalid-return-rate" | "max-months-exceeded" | "no-progress";
 };
 
 export function calculateMonthsToGoal(input: GoalTimelineInput): GoalTimelineResult {
   const maxMonths = input.maxMonths ?? 1_200;
+
+  if (input.annualReturnRate < -1 || input.annualReturnRate > 0.5) {
+    return { months: null, reached: false, reason: "invalid-return-rate" };
+  }
 
   if (input.currentAmount >= input.goalAmount) {
     return { months: 0, reached: true };
   }
 
   if (input.monthlyContribution <= 0 && input.annualReturnRate <= 0) {
-    return { months: null, reached: false };
+    return { months: null, reached: false, reason: "no-progress" };
   }
 
   const monthlyRate = input.annualReturnRate / 12;
@@ -33,5 +38,5 @@ export function calculateMonthsToGoal(input: GoalTimelineInput): GoalTimelineRes
     }
   }
 
-  return { months: null, reached: false };
+  return { months: null, reached: false, reason: "max-months-exceeded" };
 }
