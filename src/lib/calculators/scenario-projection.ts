@@ -9,6 +9,8 @@ export type ScenarioProjectionStatus = "reachable" | "unavailable";
 export type ScenarioProjectionReason =
   | "empty-allocation"
   | "negative-amount"
+  | "invalid-number"
+  | "non-integer-krw"
   | "invalid-return-rate"
   | "max-months-exceeded"
   | "no-progress";

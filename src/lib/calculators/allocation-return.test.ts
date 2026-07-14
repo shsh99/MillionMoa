@@ -82,6 +82,50 @@ describe("calculateAllocationReturn", () => {
     });
   });
 
+  it("rejects non-finite balances or contributions", () => {
+    expect(
+      calculateAllocationReturn({
+        accounts: [
+          {
+            name: "Invalid",
+            balance: Number.NaN,
+            monthlyContribution: 100_000,
+            expectedAnnualReturnRate: 0.03,
+          },
+        ],
+      }),
+    ).toEqual({
+      status: "invalid",
+      reason: "invalid-number",
+      totalBalance: null,
+      totalMonthlyContribution: null,
+      balanceWeightedAnnualReturnRate: null,
+      contributionWeightedAnnualReturnRate: null,
+    });
+  });
+
+  it("rejects non-integer KRW balances or contributions", () => {
+    expect(
+      calculateAllocationReturn({
+        accounts: [
+          {
+            name: "Invalid",
+            balance: 1_000_000,
+            monthlyContribution: 100_000.5,
+            expectedAnnualReturnRate: 0.03,
+          },
+        ],
+      }),
+    ).toEqual({
+      status: "invalid",
+      reason: "non-integer-krw",
+      totalBalance: null,
+      totalMonthlyContribution: null,
+      balanceWeightedAnnualReturnRate: null,
+      contributionWeightedAnnualReturnRate: null,
+    });
+  });
+
   it("rejects return assumptions outside the simple model bounds", () => {
     expect(
       calculateAllocationReturn({

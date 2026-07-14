@@ -7,7 +7,11 @@ export type AllocationAccountInput = {
 
 export type AllocationReturnStatus = "ok" | "empty" | "invalid";
 
-export type AllocationReturnReason = "negative-amount" | "invalid-return-rate";
+export type AllocationReturnReason =
+  | "negative-amount"
+  | "invalid-number"
+  | "non-integer-krw"
+  | "invalid-return-rate";
 
 export type AllocationReturnInput = {
   accounts: AllocationAccountInput[];
@@ -50,10 +54,44 @@ export function calculateAllocationReturn(input: AllocationReturnInput): Allocat
     };
   }
 
+  if (
+    input.accounts.some((account) => {
+      return (
+        !Number.isFinite(account.balance) ||
+        !Number.isFinite(account.monthlyContribution) ||
+        !Number.isFinite(account.expectedAnnualReturnRate)
+      );
+    })
+  ) {
+    return {
+      status: "invalid",
+      reason: "invalid-number",
+      totalBalance: null,
+      totalMonthlyContribution: null,
+      balanceWeightedAnnualReturnRate: null,
+      contributionWeightedAnnualReturnRate: null,
+    };
+  }
+
   if (input.accounts.some((account) => account.balance < 0 || account.monthlyContribution < 0)) {
     return {
       status: "invalid",
       reason: "negative-amount",
+      totalBalance: null,
+      totalMonthlyContribution: null,
+      balanceWeightedAnnualReturnRate: null,
+      contributionWeightedAnnualReturnRate: null,
+    };
+  }
+
+  if (
+    input.accounts.some((account) => {
+      return !Number.isInteger(account.balance) || !Number.isInteger(account.monthlyContribution);
+    })
+  ) {
+    return {
+      status: "invalid",
+      reason: "non-integer-krw",
       totalBalance: null,
       totalMonthlyContribution: null,
       balanceWeightedAnnualReturnRate: null,
