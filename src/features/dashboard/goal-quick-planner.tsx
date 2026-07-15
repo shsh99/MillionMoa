@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { calculateMonthsToGoal } from "@/lib/calculators/goal-timeline";
+import { calculateMonthsToGoal } from "@/lib/calculators";
 
 const goalAmount = 100_000_000;
 
