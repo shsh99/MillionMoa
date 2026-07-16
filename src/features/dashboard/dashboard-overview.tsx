@@ -26,64 +26,81 @@ const cashFlow = calculateMonthlyCashFlow({
 const remainingAmount = goalAmount - currentAssets;
 const progressPercent = Math.round((currentAssets / goalAmount) * 100);
 const savingRatePercent = Math.round(((cashFlow.savingRate ?? 0) * 100 + Number.EPSILON) * 10) / 10;
+const spendAmount = fixedCosts + variableSpending;
 
 function formatCurrency(value: number) {
   return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }
 
-const summaryCards = [
+function formatShortMoney(value: number) {
+  if (value >= 100_000_000) {
+    return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value / 100_000_000)}억원`;
+  }
+
+  if (value >= 10_000_000) {
+    return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value / 10_000_000)}천만원`;
+  }
+
+  return `${new Intl.NumberFormat("ko-KR").format(value / 10_000)}만원`;
+}
+
+const cashFlowRows = [
+  { label: "실수령", amount: monthlyTakeHome, tone: "text-[#111827]" },
+  { label: "생활비", amount: spendAmount, tone: "text-[#687385]" },
+  { label: "비상금", amount: reserveContribution, tone: "text-[#687385]" },
+  { label: "저축/투자", amount: monthlyContribution, tone: "text-[#2563eb]" },
+];
+
+const allocationRows = [
   {
-    label: "현재 자산",
-    value: formatCurrency(currentAssets),
-    caption: `목표의 ${progressPercent}%`,
+    label: "생활비 통장",
+    amount: spendAmount,
+    caption: "고정비와 변동비를 먼저 잠금",
+    percent: Math.round((spendAmount / monthlyTakeHome) * 100),
   },
   {
-    label: "매달 가능액",
-    value: formatCurrency(monthlyContribution),
-    caption: `저축률 ${savingRatePercent}% 기준`,
+    label: "비상금",
+    amount: reserveContribution,
+    caption: "CMA/파킹 계좌에 자동 이체",
+    percent: Math.round((reserveContribution / monthlyTakeHome) * 100),
   },
   {
-    label: "예상 기간",
-    value: timeline.months === null ? "계산 필요" : `${timeline.months}개월`,
-    caption: timeline.months === null ? "입력값 확인 필요" : "수익률 0% 단순 추정",
+    label: "목표 계좌",
+    amount: monthlyContribution,
+    caption: "ISA, 적금, 일반 투자로 분리",
+    percent: Math.round((monthlyContribution / monthlyTakeHome) * 100),
   },
 ];
 
-const accountRows = [
-  { name: "생활비", amount: fixedCosts + variableSpending, note: "고정비+변동비" },
-  { name: "비상금", amount: reserveContribution, note: "CMA/파킹" },
-  { name: "저축/투자", amount: monthlyContribution, note: "ISA/적금/일반" },
-];
-
-const nextActions = [
-  { title: "월급 통장 쪼개기", detail: "생활비와 저축 이체액을 월급일 기준으로 분리" },
-  { title: "월말 남은 돈 스윕", detail: "실제 남은 현금만 다음 목표 계좌로 이동" },
-  { title: "절세 입력 보강", detail: "IRP, 연금저축, ISA는 세제 효과와 투자 수익을 분리" },
+const readinessItems = [
+  { label: "월급 통장 분리", value: "준비됨" },
+  { label: "월말 스윕 규칙", value: "설정 필요" },
+  { label: "IRP/연금저축", value: "입력 필요" },
 ];
 
 export function DashboardOverview() {
   return (
     <section
       aria-labelledby="dashboard-overview-title"
-      className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8"
+      className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:px-8"
     >
-      <div className="grid gap-4">
-        <div className="overflow-hidden rounded-lg bg-[#111827] text-white">
-          <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_240px]">
-            <div className="min-w-0">
+      <div className="grid content-start gap-4">
+        <div className="overflow-hidden rounded-lg border border-[#d9e0ea] bg-white">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_290px]">
+            <div className="bg-[#111827] p-5 text-white sm:p-7">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-bold text-[#93c5fd]">MillionMoa</p>
-                <span className="rounded-md bg-white/10 px-2 py-1 text-xs font-bold text-[#cbd5e1]">
+                <p className="text-sm font-black text-[#93c5fd]">MillionMoa</p>
+                <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs font-black text-[#dbeafe]">
                   샘플 데이터
                 </span>
               </div>
               <h1
                 id="dashboard-overview-title"
-                className="mt-3 max-w-xl text-3xl font-black tracking-normal sm:text-5xl"
+                className="mt-4 max-w-xl scroll-mt-24 text-3xl font-black tracking-normal text-white sm:text-5xl"
               >
-                1억까지 남은 돈
+                1억까지 남은 금액
               </h1>
-              <p className="mt-4 break-keep text-4xl font-black tracking-normal sm:text-6xl">
+              <p className="mt-4 break-keep text-5xl font-black tracking-normal sm:text-6xl">
                 {formatCurrency(remainingAmount)}
               </p>
               <div
@@ -91,80 +108,95 @@ export function DashboardOverview() {
                 aria-valuemax={100}
                 aria-valuemin={0}
                 aria-valuenow={progressPercent}
-                className="mt-6 h-2 overflow-hidden rounded-full bg-white/15"
+                className="mt-7 h-2 overflow-hidden rounded-full bg-white/15"
                 role="progressbar"
               >
                 <div className="h-full rounded-full bg-[#60a5fa]" style={{ width: `${progressPercent}%` }} />
               </div>
-              <div className="mt-3 flex items-center justify-between text-sm font-semibold text-[#cbd5e1]">
+              <div className="mt-3 flex items-center justify-between gap-3 text-sm font-bold text-[#cbd5e1]">
                 <span>{progressPercent}% 달성</span>
-                <span>목표 {formatCurrency(goalAmount)}</span>
+                <span>목표 {formatShortMoney(goalAmount)}</span>
               </div>
             </div>
 
-            <div className="rounded-lg bg-white/10 p-4 ring-1 ring-white/15">
-              <p className="text-sm font-semibold text-[#cbd5e1]">이번 달 현금흐름</p>
-              <p className="mt-3 break-keep text-3xl font-black">
-                {formatCurrency(cashFlow.investableSurplus ?? 0)}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[#cbd5e1]">
-                생활비와 비상금 이체 후 남는 예시 금액입니다. 실제 투자 조언이 아니라
-                샘플 입력값 기준 시뮬레이션입니다.
-              </p>
+            <div className="grid content-between gap-5 bg-[#f8fafc] p-5">
+              <div>
+                <p className="text-sm font-black text-[#687385]">월 현금흐름</p>
+                <p className="mt-2 text-3xl font-black text-[#111827]">
+                  {formatCurrency(cashFlow.investableSurplus ?? 0)}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-[#687385]">
+                  생활비와 비상금 이체 후 목표 계좌로 보낼 수 있는 예시 금액입니다.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white p-3 ring-1 ring-[#d9e0ea]">
+                  <p className="text-xs font-black text-[#687385]">저축률</p>
+                  <p className="mt-1 text-2xl font-black text-[#111827]">{savingRatePercent}%</p>
+                </div>
+                <div className="rounded-lg bg-white p-3 ring-1 ring-[#d9e0ea]">
+                  <p className="text-xs font-black text-[#687385]">예상 기간</p>
+                  <p className="mt-1 text-2xl font-black text-[#111827]">
+                    {timeline.months === null ? "확인" : `${timeline.months}개월`}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          {summaryCards.map((card) => (
-            <article key={card.label} className="rounded-lg border border-[#e7ebf0] bg-white p-5">
-              <h2 className="text-sm font-bold text-[#687385]">{card.label}</h2>
-              <p className="mt-3 break-keep text-2xl font-black text-[#111827]">{card.value}</p>
-              <p className="mt-2 text-sm font-medium text-[#687385]">{card.caption}</p>
-            </article>
-          ))}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-          <section className="rounded-lg border border-[#e7ebf0] bg-white p-5" aria-labelledby="account-flow-title">
+        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="rounded-lg border border-[#d9e0ea] bg-white p-5" aria-labelledby="cash-flow-title">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 id="account-flow-title" className="text-lg font-black text-[#111827]">
-                  월급 배분
+                <h2 id="cash-flow-title" className="scroll-mt-24 text-lg font-black text-[#111827]">
+                  한 달 돈 흐름
                 </h2>
-                <p className="mt-1 text-sm font-medium text-[#687385]">이체 전에 보는 이번 달 기준안</p>
+                <p className="mt-1 text-sm font-semibold text-[#687385]">월급 들어온 뒤 빠지는 순서</p>
               </div>
-              <span className="shrink-0 rounded-md bg-[#eef4ff] px-3 py-1 text-xs font-bold text-[#2563eb]">
+              <span className="rounded-md bg-[#eff6ff] px-3 py-1 text-xs font-black text-[#2563eb]">
                 자동 계산
               </span>
             </div>
-            <div className="mt-5 divide-y divide-[#eef1f5]">
-              {accountRows.map((row) => (
-                <div className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:gap-4" key={row.name}>
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#111827]">{row.name}</p>
-                    <p className="mt-1 text-sm text-[#687385]">{row.note}</p>
-                  </div>
-                  <p className="break-keep font-black text-[#111827] sm:text-right">{formatCurrency(row.amount)}</p>
+
+            <div className="mt-5 grid gap-2">
+              {cashFlowRows.map((row, index) => (
+                <div
+                  className="grid grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg bg-[#f8fafc] px-3 py-3"
+                  key={row.label}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-xs font-black text-[#2563eb] ring-1 ring-[#d9e0ea]">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 text-sm font-black text-[#374151]">{row.label}</span>
+                  <span className={`text-right text-sm font-black tabular-nums ${row.tone}`}>
+                    {formatCurrency(row.amount)}
+                  </span>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="rounded-lg border border-[#e7ebf0] bg-white p-5" aria-labelledby="next-action-title">
-            <h2 id="next-action-title" className="text-lg font-black text-[#111827]">
-              다음에 할 일
+          <section className="rounded-lg border border-[#d9e0ea] bg-white p-5" aria-labelledby="allocation-title">
+            <h2 id="allocation-title" className="scroll-mt-24 text-lg font-black text-[#111827]">
+              월급 배분안
             </h2>
-            <div className="mt-4 grid gap-3">
-              {nextActions.map((action, index) => (
-                <div className="grid grid-cols-[32px_1fr] gap-3 rounded-lg bg-[#f6f8fb] p-3" key={action.title}>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-[#2563eb] ring-1 ring-[#e7ebf0]">
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#111827]">{action.title}</p>
-                    <p className="mt-1 text-sm leading-6 text-[#687385]">{action.detail}</p>
+            <div className="mt-5 grid gap-4">
+              {allocationRows.map((row) => (
+                <div key={row.label}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-black text-[#111827]">{row.label}</p>
+                      <p className="mt-1 text-sm font-semibold leading-5 text-[#687385]">{row.caption}</p>
+                    </div>
+                    <p className="shrink-0 text-right font-black tabular-nums text-[#111827]">
+                      {formatCurrency(row.amount)}
+                    </p>
                   </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#eef1f5]">
+                    <div className="h-full rounded-full bg-[#2563eb]" style={{ width: `${row.percent}%` }} />
+                  </div>
+                  <p className="mt-1 text-right text-xs font-black text-[#687385]">실수령의 {row.percent}%</p>
                 </div>
               ))}
             </div>
@@ -174,23 +206,24 @@ export function DashboardOverview() {
 
       <aside className="grid content-start gap-4">
         <GoalQuickPlanner />
-        <section className="rounded-lg border border-[#e7ebf0] bg-white p-5" aria-labelledby="tax-status-title">
-          <h2 id="tax-status-title" className="text-lg font-black text-[#111827]">
-            절세 체크
+
+        <section className="rounded-lg border border-[#d9e0ea] bg-white p-5" aria-labelledby="readiness-title">
+          <h2 id="readiness-title" className="text-lg font-black text-[#111827]">
+            입력 완성도
           </h2>
-          <div className="mt-4 grid gap-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#687385]">연말정산 추정 영향</span>
-              <span className="font-black text-[#111827]">0원</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#687385]">IRP/연금저축 입력</span>
-              <span className="font-black text-[#b7791f]">필요</span>
-            </div>
-            <p className="rounded-lg bg-[#fff8e8] p-3 leading-6 text-[#7c5a18]">
-              세액공제와 환급은 같지 않습니다. 실제 결과는 홈택스 자료로 확인해야 합니다.
-            </p>
+          <div className="mt-4 grid gap-3">
+            {readinessItems.map((item) => (
+              <div className="flex items-center justify-between gap-4" key={item.label}>
+                <span className="text-sm font-bold text-[#687385]">{item.label}</span>
+                <span className="rounded-md bg-[#f8fafc] px-2.5 py-1 text-xs font-black text-[#374151] ring-1 ring-[#d9e0ea]">
+                  {item.value}
+                </span>
+              </div>
+            ))}
           </div>
+          <p className="mt-4 rounded-lg bg-[#fff8e8] p-3 text-sm font-semibold leading-6 text-[#7c5a18]">
+            세액공제와 환급은 같지 않습니다. 실제 결과는 홈택스 자료로 확인해야 합니다.
+          </p>
         </section>
       </aside>
     </section>

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 const navItems = [
   { label: "대시보드", href: "/" },
-  { label: "월급 배분", href: "#account-flow-title" },
+  { label: "월급 배분", href: "#allocation-title" },
   { label: "계산기", href: "#goal-quick-planner-title" },
 ];
 
