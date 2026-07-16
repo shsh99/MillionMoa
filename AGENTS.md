@@ -6,6 +6,8 @@
 
 **Default Execution:** The administrator orchestrator decomposes work into bounded tasks and delegates independent work to sub-agents when useful. High-risk or policy-sensitive finance logic must be reviewed before implementation.
 
+**Frontend Design Workflow:** For dashboard, SaaS, mobile-first finance, or UI/UX work, apply `create-plan`, `design-md-style-control`, and `taste-skill` before implementation. Use DESIGN.md-style constraints to avoid generic AI UI, keep interactions production-grade, and verify desktop/mobile usability before completion.
+
 **Branch Strategy:**
 - `main`: stable release branch. Merge only reviewed and verified work.
 - `dev`: integration branch for completed feature work.
@@ -19,3 +21,4 @@
 | 2026-07-12 | Added tax settlement and surplus cash planning scope | design spec, policy/calculation/orchestrator skills | Support year-end refund, tax credits, small-business reduction, bonuses, surplus cash, and dividend projections |
 | 2026-07-12 | Added Git branch strategy | AGENTS.md | Use main/dev/feat workflow for project work |
 | 2026-07-12 | Added fastest-path planning scope | design spec, orchestrator/calculation skills | Combine salary surplus, account splitting, tax refunds, ISA/IRP, interest, dividends, and bonuses into shortest 100 million KRW scenarios |
+| 2026-07-16 | Applied DESIGN.md, taste-skill, and create-plan workflow | AGENTS.md, Codex skills | Raise frontend/UI work to production fintech design standards and keep repeated work planned |
