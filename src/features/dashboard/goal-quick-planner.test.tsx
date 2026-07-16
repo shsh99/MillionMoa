@@ -15,7 +15,6 @@ describe("GoalQuickPlanner", () => {
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "1000000");
     await user.clear(screen.getByLabelText("연 예상 수익률"));
     await user.type(screen.getByLabelText("연 예상 수익률"), "0");
-    await user.click(screen.getByRole("button", { name: "1억 달성 시점 계산" }));
 
     expect(screen.getByText("예상 소요 기간")).toBeInTheDocument();
     expect(screen.getByText("90개월")).toBeInTheDocument();
@@ -35,7 +34,6 @@ describe("GoalQuickPlanner", () => {
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "0");
     await user.clear(screen.getByLabelText("연 예상 수익률"));
     await user.type(screen.getByLabelText("연 예상 수익률"), "0");
-    await user.click(screen.getByRole("button", { name: "1억 달성 시점 계산" }));
 
     expect(screen.getByText("현재 조건으로는 목표 달성이 어렵습니다")).toBeInTheDocument();
   });
@@ -47,8 +45,8 @@ describe("GoalQuickPlanner", () => {
 
     await user.clear(screen.getByLabelText("연 예상 수익률"));
     await user.type(screen.getByLabelText("연 예상 수익률"), "-101");
-    await user.click(screen.getByRole("button", { name: "1억 달성 시점 계산" }));
 
+    expect(screen.getByLabelText("연 예상 수익률")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("연 수익률은 -100%에서 50% 사이로 입력해 주세요.")).toBeInTheDocument();
   });
 
@@ -63,7 +61,6 @@ describe("GoalQuickPlanner", () => {
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "1");
     await user.clear(screen.getByLabelText("연 예상 수익률"));
     await user.type(screen.getByLabelText("연 예상 수익률"), "0");
-    await user.click(screen.getByRole("button", { name: "1억 달성 시점 계산" }));
 
     expect(screen.getByText("현재 가정으로는 100년 안에 목표에 도달하지 못합니다.")).toBeInTheDocument();
   });
