@@ -4,13 +4,27 @@
 
 :root {
   color-scheme: light;
-  --money-ink: #111827;
-  --money-muted: #687385;
-  --money-line: #e7ebf0;
-  --money-page: #f6f8fb;
-  --money-panel: #ffffff;
-  --money-accent: #087a63;
-  --money-accent-soft: #eaf8f3;
+  --wallet-page: #f7f5fc;
+  --wallet-surface: #fff;
+  --wallet-surface-tint: #fbfaff;
+  --wallet-ink: #242236;
+  --wallet-muted: #747187;
+  --wallet-line: #e8e3f1;
+  --wallet-primary: #7560c9;
+  --wallet-primary-strong: #5e49b1;
+  --wallet-primary-soft: #eee9ff;
+  --wallet-mint: #49bfa0;
+  --wallet-mint-soft: #e4f8f1;
+  --wallet-coral: #de7c83;
+  --wallet-coral-soft: #fff0f1;
+  --wallet-shadow: 0 10px 30px rgba(77, 65, 120, 0.1);
+  --money-ink: var(--wallet-ink);
+  --money-muted: var(--wallet-muted);
+  --money-line: var(--wallet-line);
+  --money-page: var(--wallet-page);
+  --money-panel: var(--wallet-surface);
+  --money-accent: var(--wallet-primary);
+  --money-accent-soft: var(--wallet-primary-soft);
   --money-blue: var(--money-accent);
   --money-blue-soft: var(--money-accent-soft);
   --money-teal: #087a63;
@@ -19,8 +33,8 @@
 
 body {
   margin: 0;
-  background: var(--money-page);
-  color: var(--money-ink);
+  background: var(--wallet-page);
+  color: var(--wallet-ink);
   font-family: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
@@ -28,11 +42,11 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--money-teal);
+  outline: 2px solid var(--wallet-primary);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: #d7f1eb;
-  color: var(--money-ink);
+  background: var(--wallet-primary-soft);
+  color: var(--wallet-ink);
 }

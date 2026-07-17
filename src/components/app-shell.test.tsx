@@ -7,10 +7,10 @@ describe("AppShell", () => {
   it("preserves navigation anchors and exposes an active icon-based mobile nav", () => {
     render(
       <AppShell>
-        <div id="goal-quick-planner-title">계산기</div>
+        <div id="finance-calculators">계산기</div>
         <div id="planner-cash-flow">월 현금흐름</div>
-        <div id="planner-net-worth">순자산</div>
-        <div id="planner-loan">대출</div>
+        <div id="finance-accounts">순자산</div>
+        <div id="finance-loans">대출</div>
       </AppShell>,
     );
 
@@ -25,6 +25,11 @@ describe("AppShell", () => {
 
     const header = screen.getByRole("banner");
     expect(header.firstElementChild).toHaveClass("h-[60px]");
+    expect(screen.getByTestId("brand-mark")).toHaveClass(
+      "rounded-full",
+      "bg-[var(--wallet-primary-soft)]",
+      "text-[var(--wallet-primary-strong)]",
+    );
 
     const main = screen.getByRole("main");
     expect(main).not.toHaveClass("max-w-6xl", "px-4", "sm:px-6", "lg:px-8");
@@ -44,10 +49,12 @@ describe("AppShell", () => {
     expect(mobileNav).toHaveClass("pb-[env(safe-area-inset-bottom)]");
     const expectedItems = [
       ["홈", "/"],
-      ["계산", "#goal-quick-planner-title"],
-      ["계좌", "#planner-net-worth"],
-      ["대출", "#planner-loan"],
+      ["계산", "#finance-calculators"],
+      ["계좌", "#finance-accounts"],
+      ["대출", "#finance-loans"],
     ] as const;
+
+    expect(new Set(expectedItems.map(([, href]) => href)).size).toBe(4);
 
     for (const [label, href] of expectedItems) {
       const link = within(mobileNav).getByRole("link", { name: label });
@@ -62,7 +69,7 @@ describe("AppShell", () => {
     );
 
     act(() => {
-      window.history.replaceState(null, "", "#planner-net-worth");
+      window.history.replaceState(null, "", "#finance-accounts");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
@@ -73,7 +80,7 @@ describe("AppShell", () => {
     );
 
     act(() => {
-      window.history.replaceState(null, "", "#planner-loan");
+      window.history.replaceState(null, "", "#finance-loans");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
