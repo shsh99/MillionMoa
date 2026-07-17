@@ -86,7 +86,26 @@ function digitOffset(value: string, characterOffset: number) {
   return (value.slice(0, characterOffset).match(/\d/g) ?? []).length;
 }
 
-function characterOffset(value: string, digitsBeforeCaret: number, afterLeadingMinus: boolean) {
+function characterOffset(
+  value: string,
+  digitsBeforeCaret: number,
+  afterLeadingMinus: boolean,
+  afterDecimal: boolean,
+) {
+  if (afterDecimal) {
+    const decimalIndex = value.indexOf(".");
+    if (decimalIndex >= 0) {
+      const wholeDigits = digitOffset(value, decimalIndex);
+      const fractionalDigits = Math.max(0, digitsBeforeCaret - wholeDigits);
+      if (fractionalDigits === 0) return decimalIndex + 1;
+      let seen = 0;
+      for (let index = decimalIndex + 1; index < value.length; index += 1) {
+        if (/\d/.test(value[index])) seen += 1;
+        if (seen === fractionalDigits) return index + 1;
+      }
+      return value.length;
+    }
+  }
   if (digitsBeforeCaret === 0) return afterLeadingMinus && value.startsWith("-") ? 1 : 0;
   let digitsSeen = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -111,16 +130,20 @@ export function MoneyInput({
     endDigits: number;
     startAfterMinus: boolean;
     endAfterMinus: boolean;
+    startAfterDecimal: boolean;
+    endAfterDecimal: boolean;
   } | null>(null);
   const [incompleteDraft, setIncompleteDraft] = useState<{
-    text: "" | "-";
+    text: string;
     baseValue: number;
     ownEmittedValue?: number;
+    acknowledged: boolean;
   } | null>(null);
   const normalizedValue = normalizeKrw(value, allowNegative);
   const displayValue = formatManwon(normalizedValue);
-  const draftMatchesValue = incompleteDraft
-    && (normalizedValue === incompleteDraft.baseValue || normalizedValue === incompleteDraft.ownEmittedValue);
+  const draftMatchesValue = incompleteDraft && (incompleteDraft.acknowledged
+    ? normalizedValue === incompleteDraft.ownEmittedValue
+    : normalizedValue === incompleteDraft.baseValue || normalizedValue === incompleteDraft.ownEmittedValue);
   const activeDraft = draftMatchesValue ? incompleteDraft : null;
   const renderedValue = activeDraft?.text ?? displayValue;
   const validQuickAmounts = quickAmountsManwon.filter(
@@ -128,16 +151,35 @@ export function MoneyInput({
   );
 
   useEffect(() => {
-    if (incompleteDraft && !draftMatchesValue) setIncompleteDraft(null);
-  }, [draftMatchesValue, incompleteDraft]);
+    if (!incompleteDraft) return;
+    if (
+      !incompleteDraft.acknowledged
+      && incompleteDraft.ownEmittedValue !== undefined
+      && normalizedValue === incompleteDraft.ownEmittedValue
+    ) {
+      setIncompleteDraft({ ...incompleteDraft, acknowledged: true });
+    } else if (!draftMatchesValue) {
+      setIncompleteDraft(null);
+    }
+  }, [draftMatchesValue, incompleteDraft, normalizedValue]);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
     const selection = selectionRef.current;
     if (input && selection && document.activeElement === input) {
       input.setSelectionRange(
-        characterOffset(renderedValue, selection.startDigits, selection.startAfterMinus),
-        characterOffset(renderedValue, selection.endDigits, selection.endAfterMinus),
+        characterOffset(
+          renderedValue,
+          selection.startDigits,
+          selection.startAfterMinus,
+          selection.startAfterDecimal,
+        ),
+        characterOffset(
+          renderedValue,
+          selection.endDigits,
+          selection.endAfterMinus,
+          selection.endAfterDecimal,
+        ),
       );
     }
   }, [renderedValue]);
@@ -150,6 +192,8 @@ export function MoneyInput({
       endDigits: digitOffset(input.value, input.selectionEnd),
       startAfterMinus: input.value.startsWith("-") && input.selectionStart > 0,
       endAfterMinus: input.value.startsWith("-") && input.selectionEnd > 0,
+      startAfterDecimal: input.value.includes(".") && input.selectionStart > input.value.indexOf("."),
+      endAfterDecimal: input.value.includes(".") && input.selectionEnd > input.value.indexOf("."),
     };
   };
 
@@ -177,16 +221,29 @@ export function MoneyInput({
                 text: "",
                 baseValue: normalizedValue,
                 ownEmittedValue: emitsZero ? 0 : undefined,
+                acknowledged: false,
               });
               if (emitsZero) onChange(0);
               return;
             }
             if (allowNegative && event.target.value === "-") {
-              setIncompleteDraft({ text: "-", baseValue: normalizedValue });
+              setIncompleteDraft({ text: "-", baseValue: normalizedValue, acknowledged: false });
+              return;
+            }
+            const nextValue = parseManwon(event.target.value, allowNegative);
+            const decimalDraftPattern = allowNegative ? /^-?\d[\d,]*\.\d{0,4}$/ : /^\d[\d,]*\.\d{0,4}$/;
+            if (decimalDraftPattern.test(event.target.value)) {
+              setIncompleteDraft({
+                text: event.target.value,
+                baseValue: normalizedValue,
+                ownEmittedValue: nextValue,
+                acknowledged: false,
+              });
+              if (nextValue !== normalizedValue) onChange(nextValue);
               return;
             }
             setIncompleteDraft(null);
-            onChange(parseManwon(event.target.value, allowNegative));
+            onChange(nextValue);
           }}
           onSelect={rememberSelection}
         />
@@ -198,7 +255,11 @@ export function MoneyInput({
             className="ml-1 flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-2xl text-base font-bold text-[var(--wallet-muted)] hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
             onClick={() => {
               if (normalizedValue === 0) {
-                setIncompleteDraft({ text: activeDraft?.text === "-" ? "" : "-", baseValue: 0 });
+                setIncompleteDraft({
+                  text: activeDraft?.text === "-" ? "" : "-",
+                  baseValue: 0,
+                  acknowledged: false,
+                });
                 return;
               }
               setIncompleteDraft(null);

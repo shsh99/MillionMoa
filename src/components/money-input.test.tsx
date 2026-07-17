@@ -35,6 +35,7 @@ function ExternalResetHarness() {
     <>
       <MoneyInput id="monthly-pay" label="월급" value={value} allowNegative onChange={setValue} />
       <button type="button" onClick={() => setValue(7_500_000)}>외부 값 설정</button>
+      <button type="button" onClick={() => setValue(3_200_000)}>원래 값 복원</button>
     </>
   );
 }
@@ -180,6 +181,34 @@ describe("MoneyInput", () => {
     fireEvent.change(input, { target: { value: "0.0001 " } });
     expect(onChange).toHaveBeenLastCalledWith(1);
     expect(input).toHaveValue("0.0001");
+  });
+
+  it("preserves partial decimal drafts during sequential typing", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    await user.clear(input);
+    await user.type(input, "1.");
+    expect(input).toHaveValue("1.");
+    await user.type(input, "5");
+
+    expect(input).toHaveValue("1.5");
+    expect(onChange).toHaveBeenLastCalledWith(15_000);
+  });
+
+  it("lets a later controlled reset supersede an acknowledged clear draft", async () => {
+    const user = userEvent.setup();
+    render(<ExternalResetHarness />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    await user.clear(input);
+    expect(input).toHaveValue("");
+    expect(screen.getByText("영원")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "원래 값 복원" }));
+    expect(input).toHaveValue("320");
   });
 
   it("gives the textbox a minimum 44px hit area", () => {
