@@ -103,11 +103,15 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           <div className="grid gap-3 sm:grid-cols-2"><CashFlowInput label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} /><CashFlowInput label="월 생활 지출" value={input.monthlyNonLoanExpense} onChange={(monthlyNonLoanExpense) => setInput((current) => ({ ...current, monthlyNonLoanExpense }))} /></div>
         </section>
 
-        <FinanceScenarioEditor value={input} onChange={setInput} />
-        <FinanceVisualizations assets={input.assets} loans={input.loans} scenario={scenario} projection={projection} />
+        <div className="scroll-mt-20" id="finance-accounts">
+          <FinanceScenarioEditor value={input} onChange={setInput} />
+        </div>
+        <div className="scroll-mt-20" id="finance-loans">
+          <FinanceVisualizations assets={input.assets} loans={input.loans} scenario={scenario} projection={projection} />
+        </div>
 
         <details className="rounded-2xl border border-slate-200 bg-white">
-          <summary className="cursor-pointer list-none px-5 py-4 text-sm font-extrabold text-slate-800">계산 기준과 세금 안내</summary>
+          <summary className="scroll-mt-20 cursor-pointer list-none px-5 py-4 text-sm font-extrabold text-slate-800" id="finance-calculators">계산 기준과 세금 안내</summary>
           <div className="grid gap-3 border-t border-slate-100 px-5 py-4 text-sm leading-6 text-slate-600 sm:grid-cols-2">
             <p><strong className="block text-slate-900">수익률</strong>각 계좌에 입력한 연 수익률을 계좌별로 적용하며, 월 적자가 생기면 보유 자산을 먼저 소진합니다.</p>
             <p><strong className="block text-slate-900">세금·환급</strong>현재 전망은 세전 단순 추정입니다. 세액공제와 연말정산 환급은 실제 납부세액과 홈택스 자료를 기준으로 별도 확인해야 합니다.</p>

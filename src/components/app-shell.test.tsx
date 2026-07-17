@@ -2,15 +2,13 @@ import { act, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { AppShell } from "@/components/app-shell";
+import { DashboardOverview } from "@/features/dashboard/dashboard-overview";
 
 describe("AppShell", () => {
   it("preserves navigation anchors and exposes an active icon-based mobile nav", () => {
     render(
       <AppShell>
-        <div id="finance-calculators">계산기</div>
-        <div id="planner-cash-flow">월 현금흐름</div>
-        <div id="finance-accounts">순자산</div>
-        <div id="finance-loans">대출</div>
+        <DashboardOverview />
       </AppShell>,
     );
 
@@ -23,7 +21,7 @@ describe("AppShell", () => {
     const shell = screen.getByRole("main").parentElement;
     expect(shell).toHaveClass("pb-[calc(4rem+env(safe-area-inset-bottom))]");
 
-    const header = screen.getByRole("banner");
+    const header = screen.getByRole("link", { name: /MillionMoa/ }).closest("header")!;
     expect(header.firstElementChild).toHaveClass("h-[60px]");
     expect(screen.getByTestId("brand-mark")).toHaveClass(
       "rounded-full",
@@ -60,7 +58,7 @@ describe("AppShell", () => {
       const link = within(mobileNav).getByRole("link", { name: label });
       expect(link).toHaveAttribute("href", href);
       expect(link.querySelector("svg")).toBeInTheDocument();
-      if (href.startsWith("#")) expect(document.querySelector(href)).toBeInTheDocument();
+      if (href.startsWith("#")) expect(document.querySelector(href)).toBeVisible();
     }
 
     expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveAttribute(

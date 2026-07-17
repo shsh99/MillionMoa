@@ -21,6 +21,14 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
   });
 
+  it("provides visible destinations for wallet navigation", () => {
+    render(<DashboardOverview />);
+
+    for (const id of ["finance-calculators", "finance-accounts", "finance-loans"]) {
+      expect(document.getElementById(id)).toBeVisible();
+    }
+  });
+
   it("adds quick amounts cumulatively and updates the summary", async () => {
     const user = userEvent.setup();
     render(<DashboardOverview />);
