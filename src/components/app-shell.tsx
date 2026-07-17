@@ -12,9 +12,9 @@ const navItems = [
 
 const bottomNavItems = [
   { label: "홈", href: "/", icon: Home },
-  { label: "계산", href: "#goal-quick-planner-title", icon: WalletCards },
-  { label: "계좌", href: "#planner-net-worth", icon: Landmark },
-  { label: "대출", href: "#planner-loan", icon: ChartNoAxesCombined },
+  { label: "계산", href: "#finance-calculators", icon: WalletCards },
+  { label: "계좌", href: "#finance-accounts", icon: Landmark },
+  { label: "대출", href: "#finance-loans", icon: ChartNoAxesCombined },
 ];
 
 type AppShellProps = {
@@ -33,7 +33,7 @@ export function AppShell({ children }: AppShellProps) {
   }, []);
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--money-page)] pb-[calc(4rem+env(safe-area-inset-bottom))] text-[var(--money-ink)] md:pb-0">
+    <div className="min-h-[100dvh] bg-[var(--wallet-page)] pb-[calc(4rem+env(safe-area-inset-bottom))] text-[var(--wallet-ink)] md:pb-0">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[#111827] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -41,11 +41,14 @@ export function AppShell({ children }: AppShellProps) {
         본문으로 건너뛰기
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-[var(--money-line)] bg-white/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[60px] w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/" className="flex shrink-0 items-center gap-2 text-sm font-black text-[var(--money-ink)]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--money-accent)] text-xs font-black text-white">
+            <Link href="/" className="flex shrink-0 items-center gap-2 text-sm font-black text-[var(--wallet-ink)]">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--wallet-primary-soft)] text-xs font-black text-[var(--wallet-primary-strong)]"
+                data-testid="brand-mark"
+              >
                 M
               </span>
               MillionMoa
@@ -56,7 +59,7 @@ export function AppShell({ children }: AppShellProps) {
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-bold text-[var(--money-muted)] transition-colors hover:bg-[var(--money-accent-soft)] hover:text-[var(--money-accent)]"
+                className="flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm font-bold text-[var(--wallet-muted)] transition-colors hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)]"
               >
                 {item.label}
               </Link>
@@ -69,7 +72,7 @@ export function AppShell({ children }: AppShellProps) {
 
       <nav
         aria-label="모바일 주요 메뉴"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--money-line)] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(24,32,43,0.08)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)]/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[var(--wallet-shadow)] backdrop-blur-xl md:hidden"
       >
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
@@ -78,7 +81,7 @@ export function AppShell({ children }: AppShellProps) {
           return (
             <Link
               aria-current={isCurrent ? "page" : undefined}
-              className={`flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-md text-[11px] font-bold transition-colors active:bg-[var(--money-accent-soft)] ${isCurrent ? "text-[var(--money-accent)]" : "text-[var(--money-muted)] hover:text-[var(--money-ink)]"}`}
+              className={`flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-md text-[11px] font-bold transition-colors active:bg-[var(--wallet-primary-soft)] ${isCurrent ? "text-[var(--wallet-primary-strong)]" : "text-[var(--wallet-muted)] hover:text-[var(--wallet-ink)]"}`}
               href={item.href}
               key={item.label}
             >

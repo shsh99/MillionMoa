@@ -5,7 +5,7 @@ import {
   createFinanceProjectionSeries,
   type FinanceScenarioInput,
 } from "./finance-scenario-model";
-import { FinanceVisualizations } from "./finance-visualizations";
+import { FinanceVisualizations, walletChartColors } from "./finance-visualizations";
 
 const input: FinanceScenarioInput = {
   assets: [
@@ -48,6 +48,19 @@ function renderVisualizations() {
 }
 
 describe("FinanceVisualizations", () => {
+  it("uses the selected wallet chart palette", () => {
+    expect(walletChartColors).toEqual(["#7560c9", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#947bd8"]);
+  });
+
+  it("gives each visualization icon a semantic pastel tone", () => {
+    renderVisualizations();
+
+    expect(screen.getByTestId("visualization-icon-lilac")).toBeInTheDocument();
+    expect(screen.getByTestId("visualization-icon-mint")).toBeInTheDocument();
+    expect(screen.getByTestId("visualization-icon-blue")).toBeInTheDocument();
+    expect(screen.getByTestId("visualization-icon-coral")).toBeInTheDocument();
+  });
+
   it("renders accessible chart summaries including negative net worth and signed cash flow", () => {
     renderVisualizations();
 
@@ -79,5 +92,6 @@ describe("FinanceVisualizations", () => {
     expect(within(table).getByText("학자금대출")).toBeInTheDocument();
     expect(within(table).getByText("원금균등")).toBeInTheDocument();
     expect(within(table).getAllByText(/만원/).length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByRole("region", { name: "대출 상환표 가로 스크롤" })).toHaveAttribute("tabindex", "0");
   });
 });

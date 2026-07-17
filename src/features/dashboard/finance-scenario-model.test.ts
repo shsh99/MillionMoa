@@ -4,6 +4,7 @@ import {
   calculateFinanceScenario,
   calculateLoanScheduleSummary,
   createFinanceProjectionSeries,
+  financeScenarioSchema,
   type AssetAccount,
   type Loan,
 } from "./finance-scenario-model";
@@ -33,6 +34,60 @@ const loans: Loan[] = [
     repaymentMethod: "bullet",
   },
 ];
+
+describe("financeScenarioSchema", () => {
+  const validScenario = {
+    assets: [{
+      id: "asset",
+      name: "Asset",
+      category: "investment",
+      balance: 0,
+      annualRate: -1,
+      monthlyContribution: 0,
+      maturityMonth: 0,
+    }],
+    loans: [{
+      id: "loan",
+      name: "Loan",
+      category: "student",
+      principal: 0,
+      annualRate: 1,
+      remainingMonths: 1_200,
+      repaymentMethod: "equal-principal",
+    }],
+    manualLiabilities: 0,
+    monthlyIncome: 0,
+    monthlyNonLoanExpense: 0,
+  };
+
+  it("accepts the current finance scenario contract at its boundaries", () => {
+    expect(financeScenarioSchema.parse(validScenario)).toEqual(validScenario);
+  });
+
+  it.each([
+    ["asset category", { assets: [{ ...validScenario.assets[0], category: "crypto" }] }],
+    ["asset balance", { assets: [{ ...validScenario.assets[0], balance: 0.5 }] }],
+    ["asset rate", { assets: [{ ...validScenario.assets[0], annualRate: 1.01 }] }],
+    ["asset contribution", { assets: [{ ...validScenario.assets[0], monthlyContribution: -1 }] }],
+    ["asset maturity", { assets: [{ ...validScenario.assets[0], maturityMonth: -1 }] }],
+    ["loan category", { loans: [{ ...validScenario.loans[0], category: "payday" }] }],
+    ["loan principal", { loans: [{ ...validScenario.loans[0], principal: -1 }] }],
+    ["loan rate", { loans: [{ ...validScenario.loans[0], annualRate: -0.01 }] }],
+    ["loan term", { loans: [{ ...validScenario.loans[0], remainingMonths: 1_201 }] }],
+    ["repayment method", { loans: [{ ...validScenario.loans[0], repaymentMethod: "interest-only" }] }],
+    ["manual liabilities", { manualLiabilities: 0.5 }],
+    ["monthly income", { monthlyIncome: -1 }],
+    ["monthly expense", { monthlyNonLoanExpense: Number.NaN }],
+    ["asset id length", { assets: [{ ...validScenario.assets[0], id: "a".repeat(129) }] }],
+    ["asset name length", { assets: [{ ...validScenario.assets[0], name: "a".repeat(81) }] }],
+    ["loan id length", { loans: [{ ...validScenario.loans[0], id: "a".repeat(129) }] }],
+    ["loan name length", { loans: [{ ...validScenario.loans[0], name: "a".repeat(81) }] }],
+    ["asset count", { assets: Array.from({ length: 101 }, () => validScenario.assets[0]) }],
+    ["loan count", { loans: Array.from({ length: 101 }, () => validScenario.loans[0]) }],
+  ])("rejects an invalid %s", (_label, patch) => {
+    expect(financeScenarioSchema.safeParse({ ...validScenario, ...patch }).success).toBe(false);
+  });
+});
 
 describe("calculateLoanScheduleSummary", () => {
   it("rejects loan terms beyond the supported projection boundary", () => {
