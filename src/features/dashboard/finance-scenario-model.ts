@@ -401,8 +401,9 @@ export function calculateScenarioMonthsToGoal(
   input: FinanceScenarioInput,
   goalAmount: number,
   maxMonths = 1_200,
+  referenceDate?: string,
 ) {
   assertNonNegativeKrw(goalAmount, "goal amount");
-  const series = createFinanceProjectionSeries(input, { maxMonths, intervalMonths: 1 });
+  const series = createFinanceProjectionSeries(input, { maxMonths, intervalMonths: 1, referenceDate });
   return series.find((point) => point.debtAdjusted >= goalAmount)?.month ?? null;
 }

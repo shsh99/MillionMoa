@@ -110,9 +110,13 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     setInput(scenarioInput);
     persistInput(scenarioInput);
   };
-  const scenario = useMemo(() => calculateFinanceScenario(input), [input]);
-  const projection = useMemo(() => createFinanceProjectionSeries(input), [input]);
-  const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount), [input]);
+  const calculationReferenceDate = useMemo(
+    () => (referenceDate ?? new Date()).toISOString().slice(0, 10),
+    [referenceDate],
+  );
+  const scenario = useMemo(() => calculateFinanceScenario(input, { referenceDate: calculationReferenceDate }), [calculationReferenceDate, input]);
+  const projection = useMemo(() => createFinanceProjectionSeries(input, { referenceDate: calculationReferenceDate }), [calculationReferenceDate, input]);
+  const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount, 1_200, calculationReferenceDate), [calculationReferenceDate, input]);
   const progressPercent = Math.max(0, Math.min(100, Math.round((scenario.netWorth / goalAmount) * 100)));
   const remainingAmount = goalAmount - scenario.netWorth;
 

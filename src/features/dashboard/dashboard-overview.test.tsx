@@ -57,6 +57,21 @@ describe("DashboardOverview", () => {
     expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("814,465원");
   });
 
+  it("excludes future expenses from the current dashboard month", async () => {
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: {
+        ...initialFinanceScenario,
+        expenses: [{ ...initialFinanceScenario.expenses[0], startDate: "2026-02-01" }],
+        monthlyNonLoanExpense: 700_000,
+      },
+    }));
+
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
+
+    await waitFor(() => expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent(/^0원$/));
+  });
+
   it("restores an edited expense item after remounting", async () => {
     const user = userEvent.setup();
     const view = render(<DashboardOverview />);
