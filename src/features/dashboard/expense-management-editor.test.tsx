@@ -179,6 +179,23 @@ describe("ExpenseManagementEditor", () => {
     expect(onChange.mock.calls[0][0][0]).toMatchObject({ note: "교통비 메모" });
   });
 
+  it("bounds direct and quick amount changes at the finance schema maximum", async () => {
+    const user = userEvent.setup();
+    const maximum = 1_000_000_000_000;
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => item.amount >= 0 && item.amount <= maximum)).toBe(true);
+    });
+    render(<ControlledEditor initialValue={[{ ...expenses[0], amount: maximum - 50_000 }]} onChange={onChange} />);
+
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+    expect(onChange.mock.calls.at(-1)?.[0][0]).toMatchObject({ amount: maximum });
+
+    const amount = screen.getByRole("textbox", { name: "금액" });
+    await user.clear(amount);
+    await user.type(amount, "100000001");
+    expect(onChange.mock.calls.at(-1)?.[0][0]).toMatchObject({ amount: maximum });
+  });
+
   it("shows schedule fields appropriate to the selected frequency", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);
