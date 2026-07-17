@@ -9,8 +9,10 @@
   --money-line: #e7ebf0;
   --money-page: #f6f8fb;
   --money-panel: #ffffff;
-  --money-blue: #087a63;
-  --money-blue-soft: #eaf8f3;
+  --money-accent: #087a63;
+  --money-accent-soft: #eaf8f3;
+  --money-blue: var(--money-accent);
+  --money-blue-soft: var(--money-accent-soft);
   --money-teal: #087a63;
   --money-amber: #b7791f;
 }
@@ -19,7 +21,10 @@ body {
   margin: 0;
   background: var(--money-page);
   color: var(--money-ink);
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 :focus-visible {
