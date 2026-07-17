@@ -50,8 +50,8 @@ export type FinanceScenarioInput = {
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
 
 const assetAccountSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+  id: z.string().max(128),
+  name: z.string().max(80),
   category: z.enum([
     "checking",
     "parking",
@@ -68,8 +68,8 @@ const assetAccountSchema = z.object({
 });
 
 const loanSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+  id: z.string().max(128),
+  name: z.string().max(80),
   category: z.enum(["credit", "jeonse", "mortgage", "student", "card", "other"]),
   principal: nonNegativeIntegerSchema,
   annualRate: z.number().min(0).max(1),
@@ -78,8 +78,8 @@ const loanSchema = z.object({
 });
 
 export const financeScenarioSchema: z.ZodType<FinanceScenarioInput> = z.object({
-  assets: z.array(assetAccountSchema),
-  loans: z.array(loanSchema),
+  assets: z.array(assetAccountSchema).max(100),
+  loans: z.array(loanSchema).max(100),
   manualLiabilities: nonNegativeIntegerSchema.optional(),
   monthlyIncome: nonNegativeIntegerSchema,
   monthlyNonLoanExpense: nonNegativeIntegerSchema,

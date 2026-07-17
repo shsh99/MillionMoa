@@ -78,6 +78,12 @@ describe("financeScenarioSchema", () => {
     ["manual liabilities", { manualLiabilities: 0.5 }],
     ["monthly income", { monthlyIncome: -1 }],
     ["monthly expense", { monthlyNonLoanExpense: Number.NaN }],
+    ["asset id length", { assets: [{ ...validScenario.assets[0], id: "a".repeat(129) }] }],
+    ["asset name length", { assets: [{ ...validScenario.assets[0], name: "a".repeat(81) }] }],
+    ["loan id length", { loans: [{ ...validScenario.loans[0], id: "a".repeat(129) }] }],
+    ["loan name length", { loans: [{ ...validScenario.loans[0], name: "a".repeat(81) }] }],
+    ["asset count", { assets: Array.from({ length: 101 }, () => validScenario.assets[0]) }],
+    ["loan count", { loans: Array.from({ length: 101 }, () => validScenario.loans[0]) }],
   ])("rejects an invalid %s", (_label, patch) => {
     expect(financeScenarioSchema.safeParse({ ...validScenario, ...patch }).success).toBe(false);
   });
