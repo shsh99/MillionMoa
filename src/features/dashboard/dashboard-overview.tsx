@@ -97,7 +97,7 @@ export function DashboardOverview() {
     >
       <div className="grid min-w-0 content-start gap-4">
         <div className="overflow-hidden rounded-lg border border-[#dbe3ef] bg-white shadow-[0_24px_80px_rgba(31,41,55,0.08)]">
-          <div className="bg-[radial-gradient(circle_at_20%_0%,#e7f0ff_0,#ffffff_44%,#f7fbff_100%)] p-5 sm:p-7">
+          <div className="bg-[#f3f7fc] p-5 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -120,7 +120,7 @@ export function DashboardOverview() {
 
             <div className="mt-7 rounded-lg border border-white/80 bg-white/80 p-5 shadow-[0_18px_60px_rgba(31,41,55,0.10)] backdrop-blur">
               <p className="text-sm font-bold text-[#6b7280]">현재 자산</p>
-              <p className="mt-2 break-keep text-5xl font-black tracking-normal text-[#111827] sm:text-6xl">
+              <p className="mt-2 whitespace-nowrap text-[2rem] font-black tracking-normal text-[#111827] sm:text-6xl">
                 {formatCurrency(currentAssets)}
               </p>
               <div
