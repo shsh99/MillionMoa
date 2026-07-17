@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  calculateExpenseSummary,
+  expenseCategories,
+  type ExpenseItem,
+} from "./expense-management-model";
 
 export type AssetAccountCategory =
   | "checking"
@@ -42,12 +47,44 @@ export type Loan = {
 export type FinanceScenarioInput = {
   assets: AssetAccount[];
   loans: Loan[];
+  expenses: ExpenseItem[];
   manualLiabilities?: number;
   monthlyIncome: number;
   monthlyNonLoanExpense: number;
 };
 
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
+const isoDateSchema = z.string().refine((value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}, "must be a valid ISO date");
+
+const categoryKindById = new Map<string, ExpenseItem["kind"]>(
+  expenseCategories.map(({ id, kind }) => [id, kind]),
+);
+
+const expenseItemSchema: z.ZodType<ExpenseItem> = z.object({
+  id: z.string().min(1).max(128),
+  name: z.string().min(1).max(80),
+  kind: z.enum(["fixed", "living", "irregular"]),
+  categoryId: z.enum(expenseCategories.map(({ id }) => id) as [string, ...string[]]),
+  amount: z.number().int().nonnegative().max(1_000_000_000_000),
+  frequency: z.enum(["weekly", "monthly", "quarterly", "annual", "one-time"]),
+  paymentDay: z.number().int().min(1).max(31).optional(),
+  nextPaymentDate: isoDateSchema.optional(),
+  startDate: isoDateSchema,
+  endDate: isoDateSchema.optional(),
+  autoRenewal: z.boolean(),
+  note: z.string().max(500).optional(),
+}).superRefine((expense, context) => {
+  if (categoryKindById.get(expense.categoryId) !== expense.kind) {
+    context.addIssue({ code: "custom", path: ["categoryId"], message: "category must match expense kind" });
+  }
+  if (expense.endDate !== undefined && expense.endDate < expense.startDate) {
+    context.addIssue({ code: "custom", path: ["endDate"], message: "endDate must not precede startDate" });
+  }
+});
 
 const assetAccountSchema = z.object({
   id: z.string().max(128),
@@ -80,6 +117,7 @@ const loanSchema = z.object({
 export const financeScenarioSchema: z.ZodType<FinanceScenarioInput> = z.object({
   assets: z.array(assetAccountSchema).max(100),
   loans: z.array(loanSchema).max(100),
+  expenses: z.array(expenseItemSchema).max(500),
   manualLiabilities: nonNegativeIntegerSchema.optional(),
   monthlyIncome: nonNegativeIntegerSchema,
   monthlyNonLoanExpense: nonNegativeIntegerSchema,
@@ -180,6 +218,7 @@ function validateScenario(input: FinanceScenarioInput) {
   assertNonNegativeKrw(input.manualLiabilities ?? 0, "manual liabilities");
   assertNonNegativeKrw(input.monthlyIncome, "monthly income");
   assertNonNegativeKrw(input.monthlyNonLoanExpense, "monthly non-loan expense");
+  expenseItemSchema.array().max(500).parse(input.expenses);
   for (const asset of input.assets) {
     assertNonNegativeKrw(asset.balance, "asset balance");
     const annualRate = asset.annualRate ?? 0;
@@ -196,8 +235,15 @@ function validateScenario(input: FinanceScenarioInput) {
   }
 }
 
-export function calculateFinanceScenario(input: FinanceScenarioInput) {
+export function calculateFinanceScenario(
+  input: FinanceScenarioInput,
+  options: { referenceDate?: string } = {},
+) {
   validateScenario(input);
+  const monthlyNonLoanExpense = calculateExpenseSummary(
+    input.expenses,
+    options.referenceDate,
+  ).monthlyTotal;
   const loanSummaries = input.loans.map(calculateLoanScheduleSummary);
   const totalAssetBalances = input.assets.reduce((total, asset) => total + asset.balance, 0);
   const totalLoanPrincipals = input.loans.reduce((total, loan) => total + loan.principal, 0);
@@ -207,7 +253,7 @@ export function calculateFinanceScenario(input: FinanceScenarioInput) {
     0,
   );
   const rawMonthlySurplus = input.monthlyIncome
-    - input.monthlyNonLoanExpense
+    - monthlyNonLoanExpense
     - totalLoanPayment;
 
   return {
@@ -216,7 +262,7 @@ export function calculateFinanceScenario(input: FinanceScenarioInput) {
     totalLiabilities,
     netWorth: totalAssetBalances - totalLiabilities,
     monthlyIncome: input.monthlyIncome,
-    monthlyNonLoanExpense: input.monthlyNonLoanExpense,
+    monthlyNonLoanExpense,
     totalLoanPayment,
     rawMonthlySurplus,
     goalContribution: Math.max(0, rawMonthlySurplus),
@@ -285,9 +331,9 @@ function totalProjectedAssets(state: ProjectionState) {
 
 export function createFinanceProjectionSeries(
   input: FinanceScenarioInput,
-  options: { maxMonths?: number; intervalMonths?: number } = {},
+  options: { maxMonths?: number; intervalMonths?: number; referenceDate?: string } = {},
 ): FinanceProjectionPoint[] {
-  calculateFinanceScenario(input);
+  calculateFinanceScenario(input, { referenceDate: options.referenceDate });
   const initialBalances = input.assets.map((asset) => asset.balance);
   const baselineState: ProjectionState = { accountBalances: [...initialBalances], cash: 0 };
   const debtAdjustedState: ProjectionState = { accountBalances: [...initialBalances], cash: 0 };
@@ -295,6 +341,11 @@ export function createFinanceProjectionSeries(
 
   const maxMonths = options.maxMonths ?? 120;
   const intervalMonths = options.intervalMonths ?? 12;
+  const referenceDate = options.referenceDate ?? new Date().toISOString().slice(0, 10);
+  const referenceMonth = new Date(`${referenceDate.slice(0, 7)}-01T00:00:00.000Z`);
+  if (Number.isNaN(referenceMonth.valueOf())) {
+    throw new RangeError("reference date must be an ISO date or month");
+  }
   if (!Number.isInteger(maxMonths) || maxMonths < 0 || maxMonths > 1_200) {
     throw new RangeError("projection maxMonths must be between 0 and 1200");
   }
@@ -304,7 +355,16 @@ export function createFinanceProjectionSeries(
 
   for (let month = 0; month <= maxMonths; month += 1) {
     if (month > 0) {
-      const preLoanCashFlow = input.monthlyIncome - input.monthlyNonLoanExpense;
+      const projectedMonth = new Date(Date.UTC(
+        referenceMonth.getUTCFullYear(),
+        referenceMonth.getUTCMonth() + month,
+        1,
+      )).toISOString().slice(0, 7);
+      const monthlyNonLoanExpense = calculateExpenseSummary(
+        input.expenses,
+        projectedMonth,
+      ).monthlyTotal;
+      const preLoanCashFlow = input.monthlyIncome - monthlyNonLoanExpense;
       const loanPayment = input.loans.reduce(
         (total, loan) => total + loanPaymentAtMonth(loan, month),
         0,
@@ -341,8 +401,9 @@ export function calculateScenarioMonthsToGoal(
   input: FinanceScenarioInput,
   goalAmount: number,
   maxMonths = 1_200,
+  referenceDate?: string,
 ) {
   assertNonNegativeKrw(goalAmount, "goal amount");
-  const series = createFinanceProjectionSeries(input, { maxMonths, intervalMonths: 1 });
+  const series = createFinanceProjectionSeries(input, { maxMonths, intervalMonths: 1, referenceDate });
   return series.find((point) => point.debtAdjusted >= goalAmount)?.month ?? null;
 }

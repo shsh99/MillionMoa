@@ -3,6 +3,7 @@ import {
   financeScenarioSchema,
   type FinanceScenarioInput,
 } from "./finance-scenario-model";
+import { calculateExpenseSummary } from "./expense-management-model";
 
 export const FINANCE_SCENARIO_STORAGE_KEY = "millionmoa.finance-scenario";
 const MAX_SERIALIZED_PAYLOAD_BYTES = 256 * 1_024;
@@ -13,8 +14,15 @@ export interface StorageLike {
 }
 
 const financeScenarioEnvelopeSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   scenario: financeScenarioSchema,
+});
+
+const legacyFinanceScenarioEnvelopeSchema = z.object({
+  version: z.literal(1),
+  scenario: z.object({
+    monthlyNonLoanExpense: z.number().int().nonnegative(),
+  }).passthrough(),
 });
 
 const ownerIdSchema = z.string()
@@ -36,7 +44,11 @@ export function saveFinanceScenario(
   ownerId: string,
   scenario: FinanceScenarioInput,
 ): void {
-  const envelope = financeScenarioEnvelopeSchema.parse({ version: 1, scenario });
+  const canonicalScenario = {
+    ...scenario,
+    monthlyNonLoanExpense: calculateExpenseSummary(scenario.expenses).monthlyTotal,
+  };
+  const envelope = financeScenarioEnvelopeSchema.parse({ version: 2, scenario: canonicalScenario });
   const serialized = JSON.stringify(envelope);
   if (serializedByteLength(serialized) > MAX_SERIALIZED_PAYLOAD_BYTES) {
     throw new RangeError("finance scenario payload must not exceed 256 KiB");
@@ -56,7 +68,27 @@ export function loadFinanceScenario(
       return { scenario: fallback, source: "fallback" };
     }
 
-    const envelope = financeScenarioEnvelopeSchema.parse(JSON.parse(storedValue));
+    const payload: unknown = JSON.parse(storedValue);
+    const version = z.object({ version: z.union([z.literal(1), z.literal(2)]) }).parse(payload).version;
+    if (version === 1) {
+      const legacy = legacyFinanceScenarioEnvelopeSchema.parse(payload);
+      const migrated = financeScenarioSchema.parse({
+        ...legacy.scenario,
+        expenses: [{
+          id: "legacy-monthly-non-loan-expense",
+          name: "기존 월 지출",
+          kind: "living",
+          categoryId: "living.other",
+          amount: legacy.scenario.monthlyNonLoanExpense,
+          frequency: "monthly",
+          startDate: "1970-01-01",
+          autoRenewal: true,
+        }],
+      });
+      return { scenario: migrated, source: "saved" };
+    }
+
+    const envelope = financeScenarioEnvelopeSchema.parse(payload);
     return { scenario: envelope.scenario, source: "saved" };
   } catch {
     return { scenario: fallback, source: "fallback" };

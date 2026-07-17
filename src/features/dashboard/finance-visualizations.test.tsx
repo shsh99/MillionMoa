@@ -32,6 +32,7 @@ const input: FinanceScenarioInput = {
       repaymentMethod: "equal-principal",
     },
   ],
+  expenses: [{ id: "living", name: "생활비", kind: "living", categoryId: "living.other", amount: 2_800_000, frequency: "monthly", startDate: "2026-01-01", autoRenewal: false }],
   monthlyIncome: 3_200_000,
   monthlyNonLoanExpense: 2_800_000,
 };

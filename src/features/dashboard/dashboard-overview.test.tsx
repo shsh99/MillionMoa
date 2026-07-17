@@ -2,7 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
-import { DashboardOverview, formatExpectedMonth, initialFinanceScenario } from "./dashboard-overview";
+import { StrictMode } from "react";
+import { DashboardOverview, formatExpectedMonth, formatKoreanReferenceDate, initialFinanceScenario } from "./dashboard-overview";
 import { getFinanceScenarioStorageKey } from "./finance-scenario-storage";
 
 const ownerStorageKey = getFinanceScenarioStorageKey("local-demo-profile");
@@ -16,6 +17,10 @@ describe("formatExpectedMonth", () => {
   it("normalizes a month-end reference before adding months", () => {
     expect(formatExpectedMonth(1, new Date(Date.UTC(2026, 0, 31)))).toBe("2026년 2월");
     expect(formatExpectedMonth(null)).toBe("계획 조정 필요");
+  });
+
+  it("uses the Korean calendar date around a UTC month boundary", () => {
+    expect(formatKoreanReferenceDate(new Date("2026-01-31T15:30:00.000Z"))).toBe("2026-02-01");
   });
 });
 
@@ -37,6 +42,73 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "지출 관리" })).toBeInTheDocument();
+  });
+
+  it("uses categorized expenses as the single cash-flow source", async () => {
+    const user = userEvent.setup();
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "월 생활 지출" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,200,000원");
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+
+    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원");
+    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("814,465원");
+  });
+
+  it("excludes future expenses from the current dashboard month", async () => {
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: {
+        ...initialFinanceScenario,
+        expenses: [{ ...initialFinanceScenario.expenses[0], startDate: "2026-02-01" }],
+        monthlyNonLoanExpense: 700_000,
+      },
+    }));
+
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
+
+    await waitFor(() => expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent(/^0원$/));
+  });
+
+  it("restores an edited expense item after remounting", async () => {
+    const user = userEvent.setup();
+    const view = render(<DashboardOverview />);
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null")?.version).toBe(2));
+
+    view.unmount();
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원"));
+  });
+
+  it("persists the first user edit under Strict Mode", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: { ...initialFinanceScenario, monthlyIncome: 3_300_000 },
+    }));
+    render(<StrictMode><DashboardOverview /></StrictMode>);
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null");
+      expect(saved.scenario.expenses.find((item: { id: string }) => item.id === "food").amount).toBe(800_000);
+    });
   });
 
   it("provides visible destinations for wallet navigation", () => {
@@ -73,7 +145,7 @@ describe("DashboardOverview", () => {
     expect(setItem).not.toHaveBeenCalled();
   });
 
-  it("saves updates as a version 1 envelope under the owner-scoped key", async () => {
+  it("saves updates as a version 2 envelope under the owner-scoped key", async () => {
     const user = userEvent.setup();
     render(<DashboardOverview />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "월 수입" })).toBeEnabled());
@@ -82,8 +154,9 @@ describe("DashboardOverview", () => {
 
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null");
-      expect(saved.version).toBe(1);
+      expect(saved.version).toBe(2);
       expect(saved.scenario.monthlyIncome).toBe(8_200_000);
+      expect(saved.scenario.expenses.length).toBeGreaterThan(0);
     });
   });
 

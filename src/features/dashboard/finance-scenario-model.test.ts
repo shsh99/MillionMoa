@@ -8,6 +8,20 @@ import {
   type AssetAccount,
   type Loan,
 } from "./finance-scenario-model";
+import type { ExpenseItem } from "./expense-management-model";
+
+function monthlyExpense(amount: number): ExpenseItem[] {
+  return amount === 0 ? [] : [{
+    id: `expense-${amount}`,
+    name: "Monthly expense",
+    kind: "living",
+    categoryId: "living.other",
+    amount,
+    frequency: "monthly",
+    startDate: "2026-07-17",
+    autoRenewal: true,
+  }];
+}
 
 const assets: AssetAccount[] = [
   { id: "parking", name: "Parking", category: "parking", balance: 5_000_000 },
@@ -58,6 +72,7 @@ describe("financeScenarioSchema", () => {
     manualLiabilities: 0,
     monthlyIncome: 0,
     monthlyNonLoanExpense: 0,
+    expenses: [],
   };
 
   it("accepts the current finance scenario contract at its boundaries", () => {
@@ -84,8 +99,17 @@ describe("financeScenarioSchema", () => {
     ["loan name length", { loans: [{ ...validScenario.loans[0], name: "a".repeat(81) }] }],
     ["asset count", { assets: Array.from({ length: 101 }, () => validScenario.assets[0]) }],
     ["loan count", { loans: Array.from({ length: 101 }, () => validScenario.loans[0]) }],
+    ["expense count", { expenses: Array.from({ length: 501 }, () => monthlyExpense(1)[0]) }],
+    ["expense amount", { expenses: [{ ...monthlyExpense(1)[0], amount: 0.5 }] }],
+    ["expense date", { expenses: [{ ...monthlyExpense(1)[0], startDate: "2026-02-30" }] }],
+    ["expense category kind", { expenses: [{ ...monthlyExpense(1)[0], kind: "fixed" }] }],
   ])("rejects an invalid %s", (_label, patch) => {
     expect(financeScenarioSchema.safeParse({ ...validScenario, ...patch }).success).toBe(false);
+  });
+
+  it("requires canonical expenses", () => {
+    const withoutExpenses = { ...validScenario, expenses: undefined };
+    expect(financeScenarioSchema.safeParse(withoutExpenses).success).toBe(false);
   });
 });
 
@@ -186,6 +210,7 @@ describe("calculateFinanceScenario", () => {
       manualLiabilities: 1_000_000,
       monthlyIncome: 1_000_000,
       monthlyNonLoanExpense: 300_000,
+      expenses: monthlyExpense(300_000),
     })).toEqual({
       totalAssetBalances: 7_000_000,
       totalLoanPrincipals: 12_000_000,
@@ -202,15 +227,70 @@ describe("calculateFinanceScenario", () => {
       ],
     });
   });
+
+  it("derives monthly non-loan expense from recurring expense items", () => {
+    const result = calculateFinanceScenario({
+      assets: [],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 999_999,
+      expenses: [
+        ...monthlyExpense(300_000),
+        { ...monthlyExpense(120_000)[0], id: "quarterly", amount: 120_000, frequency: "quarterly" },
+        { ...monthlyExpense(1)[0], id: "once", amount: 500_000, frequency: "one-time" },
+      ],
+    });
+
+    expect(result.monthlyNonLoanExpense).toBe(340_000);
+    expect(result.rawMonthlySurplus).toBe(660_000);
+  });
+
+  it("calculates current expenses for the supplied reference month", () => {
+    const result = calculateFinanceScenario({
+      assets: [],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 0,
+      expenses: [
+        { ...monthlyExpense(300_000)[0], id: "expired", startDate: "2026-01-01", endDate: "2026-06-30" },
+        { ...monthlyExpense(200_000)[0], id: "future", startDate: "2026-08-01" },
+      ],
+    }, { referenceDate: "2026-07-17" });
+
+    expect(result.monthlyNonLoanExpense).toBe(0);
+    expect(result.rawMonthlySurplus).toBe(1_000_000);
+  });
 });
 
 describe("createFinanceProjectionSeries", () => {
+  it("recalculates active expenses as projection months cross schedule boundaries", () => {
+    const series = createFinanceProjectionSeries({
+      assets: [],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 0,
+      expenses: [{
+        ...monthlyExpense(400_000)[0],
+        startDate: "2026-08-01",
+        endDate: "2026-09-30",
+      }],
+    }, { maxMonths: 3, intervalMonths: 1, referenceDate: "2026-07-17" });
+
+    expect(series.map(({ month, debtAdjusted }) => ({ month, debtAdjusted }))).toEqual([
+      { month: 0, debtAdjusted: 0 },
+      { month: 1, debtAdjusted: 600_000 },
+      { month: 2, debtAdjusted: 1_200_000 },
+      { month: 3, debtAdjusted: 2_200_000 },
+    ]);
+  });
+
   it("uses the changing multi-loan schedule when calculating the goal month", () => {
     const input = {
       assets: [{ ...assets[0], balance: 0 }],
       loans: [{ ...loans[0], principal: 1_200_000, annualRate: 0, remainingMonths: 12 }],
       monthlyIncome: 200_000,
       monthlyNonLoanExpense: 0,
+      expenses: [],
     };
 
     expect(calculateScenarioMonthsToGoal(input, 1_200_000)).toBe(12);
@@ -222,6 +302,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [],
       monthlyIncome: 0,
       monthlyNonLoanExpense: 500_000,
+      expenses: monthlyExpense(500_000),
     });
 
     expect(series[1].debtAdjusted).toBeLessThan(-4_900_000);
@@ -234,6 +315,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [{ ...loans[0], principal: 1_000_000, remainingMonths: 1, repaymentMethod: "bullet" }],
       monthlyIncome: 500_000,
       monthlyNonLoanExpense: 0,
+      expenses: [],
     }, { maxMonths: 2, intervalMonths: 1 });
 
     expect(series[1].debtAdjusted).toBe(-500_000);
@@ -249,6 +331,7 @@ describe("createFinanceProjectionSeries", () => {
       manualLiabilities: 600_000,
       monthlyIncome: 1_000_000,
       monthlyNonLoanExpense: 300_000,
+      expenses: monthlyExpense(300_000),
     });
 
     expect(series).toHaveLength(11);
@@ -265,6 +348,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [],
       monthlyIncome: 1_000_000,
       monthlyNonLoanExpense: 250_000,
+      expenses: monthlyExpense(250_000),
     });
 
     expect(series[1].baseline).toBe(16_000_000);
@@ -277,6 +361,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [{ ...loans[0], principal: 1_200_000, remainingMonths: 12 }],
       monthlyIncome: 200_000,
       monthlyNonLoanExpense: 0,
+      expenses: [],
     });
 
     expect(series[1]).toEqual({ month: 12, zero: 0, baseline: 2_400_000, debtAdjusted: 1_200_000 });
@@ -289,6 +374,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [{ ...loans[0], principal: 1_200_000, remainingMonths: 12 }],
       monthlyIncome: 200_000,
       monthlyNonLoanExpense: 0,
+      expenses: [],
     });
 
     expect(series[1]).toEqual({ month: 12, zero: 0, baseline: 2_400_000, debtAdjusted: 1_200_000 });
@@ -300,6 +386,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [],
       monthlyIncome: 100_000,
       monthlyNonLoanExpense: 200_000,
+      expenses: monthlyExpense(200_000),
     });
 
     expect(series[1]).toEqual({ month: 12, zero: 0, baseline: -200_000, debtAdjusted: -200_000 });
@@ -317,6 +404,7 @@ describe("createFinanceProjectionSeries", () => {
       }],
       monthlyIncome: 200_000,
       monthlyNonLoanExpense: 0,
+      expenses: [],
     });
 
     expect(series[0].debtAdjusted).toBe(-1_200_000);
@@ -336,6 +424,7 @@ describe("createFinanceProjectionSeries", () => {
       loans: [],
       monthlyIncome: 1_000_000,
       monthlyNonLoanExpense: 300_000,
+      expenses: monthlyExpense(300_000),
       ...patch,
     })).toThrow(RangeError);
   });

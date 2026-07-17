@@ -32,6 +32,16 @@ const scenario: FinanceScenarioInput = {
   manualLiabilities: 100_000,
   monthlyIncome: 3_000_000,
   monthlyNonLoanExpense: 1_500_000,
+  expenses: [{
+    id: "living-other",
+    name: "Living expenses",
+    kind: "living",
+    categoryId: "living.other",
+    amount: 1_500_000,
+    frequency: "monthly",
+    startDate: "2026-07-17",
+    autoRenewal: true,
+  }],
 };
 
 class MemoryStorage implements StorageLike {
@@ -47,13 +57,13 @@ class MemoryStorage implements StorageLike {
 }
 
 describe("finance scenario storage", () => {
-  it("roundtrips a validated scenario in a version 1 envelope", () => {
+  it("roundtrips a validated scenario in a version 2 envelope", () => {
     const storage = new MemoryStorage();
 
     saveFinanceScenario(storage, OWNER_ID, scenario);
 
     expect(JSON.parse(storage.values.get(getFinanceScenarioStorageKey(OWNER_ID))!)).toEqual({
-      version: 1,
+      version: 2,
       scenario,
     });
     expect(loadFinanceScenario(storage, OWNER_ID, { ...scenario, assets: [] })).toEqual({
@@ -86,8 +96,8 @@ describe("finance scenario storage", () => {
   it.each([
     ["missing value", undefined],
     ["malformed JSON", "{"],
-    ["invalid scenario", JSON.stringify({ version: 1, scenario: { ...scenario, monthlyIncome: -1 } })],
-    ["unsupported version", JSON.stringify({ version: 2, scenario })],
+    ["invalid scenario", JSON.stringify({ version: 2, scenario: { ...scenario, monthlyIncome: -1 } })],
+    ["unsupported version", JSON.stringify({ version: 3, scenario })],
   ])("returns the fallback for %s without mutating it", (_label, storedValue) => {
     const storage = new MemoryStorage();
     if (storedValue !== undefined) {
@@ -101,6 +111,65 @@ describe("finance scenario storage", () => {
     expect(result).toEqual({ scenario: fallback, source: "fallback" });
     expect(result.scenario).toBe(fallback);
     expect(fallback).toEqual(before);
+  });
+
+  it("canonicalizes the compatibility monthly expense before validating a v2 save", () => {
+    const storage = new MemoryStorage();
+
+    saveFinanceScenario(storage, OWNER_ID, {
+      ...scenario,
+      monthlyNonLoanExpense: -1,
+      expenses: [{ ...scenario.expenses[0], amount: 750_000 }],
+    });
+
+    const saved = JSON.parse(storage.values.get(getFinanceScenarioStorageKey(OWNER_ID))!);
+    expect(saved.scenario.monthlyNonLoanExpense).toBe(750_000);
+  });
+
+  it("migrates a version 1 aggregate into exactly one monthly living expense", () => {
+    const storage = new MemoryStorage();
+    const legacyScenario: Partial<FinanceScenarioInput> = { ...scenario };
+    delete legacyScenario.expenses;
+    storage.values.set(
+      getFinanceScenarioStorageKey(OWNER_ID),
+      JSON.stringify({ version: 1, scenario: legacyScenario }),
+    );
+
+    const result = loadFinanceScenario(storage, OWNER_ID, scenario);
+
+    expect(result).toEqual({
+      source: "saved",
+      scenario: {
+        ...legacyScenario,
+        expenses: [{
+          id: "legacy-monthly-non-loan-expense",
+          name: "기존 월 지출",
+          kind: "living",
+          categoryId: "living.other",
+          amount: 1_500_000,
+          frequency: "monthly",
+          startDate: "1970-01-01",
+          autoRenewal: true,
+        }],
+      },
+    });
+  });
+
+  it("synchronizes the compatibility aggregate while migrating version 1", () => {
+    const storage = new MemoryStorage();
+    storage.values.set(
+      getFinanceScenarioStorageKey(OWNER_ID),
+      JSON.stringify({
+        version: 1,
+        scenario: { ...scenario, monthlyNonLoanExpense: 625_000, expenses: undefined },
+      }),
+    );
+
+    const result = loadFinanceScenario(storage, OWNER_ID, scenario);
+
+    expect(result.source).toBe("saved");
+    expect(result.scenario.monthlyNonLoanExpense).toBe(625_000);
+    expect(result.scenario.expenses[0].amount).toBe(625_000);
   });
 
   it.each(["", "   ", "a".repeat(129)])("rejects invalid owner scope %j on save", (ownerId) => {
@@ -185,7 +254,7 @@ describe("finance scenario storage", () => {
 
   it("strips unknown keys without allowing __proto__ pollution", () => {
     const storage = new MemoryStorage();
-    const serialized = JSON.stringify({ version: 1, scenario });
+    const serialized = JSON.stringify({ version: 2, scenario });
     const payload = serialized.replace(
       '"monthlyIncome":3000000',
       '"unknown":"removed","__proto__":{"polluted":true},"monthlyIncome":3000000',

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, Landmark, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
+import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
 import {
   calculateFinanceScenario,
@@ -28,6 +29,14 @@ export const initialFinanceScenario: FinanceScenarioInput = {
   loans: [
     { id: "student-loan", name: "학자금 대출", category: "student", principal: 3_000_000, annualRate: 0.017, remainingMonths: 36, repaymentMethod: "equal-payment" },
   ],
+  expenses: [
+    { id: "rent", name: "월세", kind: "fixed", categoryId: "fixed.housing", amount: 700_000, frequency: "monthly", paymentDay: 25, startDate: "2026-01-01", autoRenewal: true },
+    { id: "utilities", name: "공과금", kind: "fixed", categoryId: "fixed.utilities", amount: 400_000, frequency: "monthly", paymentDay: 20, startDate: "2026-01-01", autoRenewal: true },
+    { id: "telecom", name: "통신비", kind: "fixed", categoryId: "fixed.telecom", amount: 100_000, frequency: "monthly", paymentDay: 15, startDate: "2026-01-01", autoRenewal: true },
+    { id: "subscription", name: "구독 서비스", kind: "fixed", categoryId: "fixed.subscription", amount: 100_000, frequency: "monthly", paymentDay: 10, startDate: "2026-01-01", autoRenewal: true },
+    { id: "food", name: "식비", kind: "living", categoryId: "living.food", amount: 700_000, frequency: "monthly", startDate: "2026-01-01", autoRenewal: false },
+    { id: "transport", name: "교통비", kind: "living", categoryId: "living.transport", amount: 200_000, frequency: "monthly", startDate: "2026-01-01", autoRenewal: false },
+  ],
   monthlyIncome: 3_200_000,
   monthlyNonLoanExpense: 2_200_000,
 };
@@ -50,6 +59,17 @@ export function formatExpectedMonth(months: number | null, referenceDate = new D
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", timeZone: "UTC" }).format(expected);
 }
 
+export function formatKoreanReferenceDate(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 function Metric({ icon, label, value, warning = false, testId }: { icon: ReactNode; label: string; value: number; warning?: boolean; testId?: string }) {
   return (
     <div className="min-w-0 px-3 py-4 sm:px-5">
@@ -63,7 +83,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [input, setInput] = useState(initialFinanceScenario);
   const [hydrated, setHydrated] = useState(false);
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
-  const skipHydrationSave = useRef(true);
+  const inputRef = useRef(initialFinanceScenario);
 
   useEffect(() => {
     let hadStoredValue = false;
@@ -74,6 +94,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
       accessFailed = true;
     }
     const loaded = loadFinanceScenario(window.localStorage, localFinanceScenarioOwner, initialFinanceScenario);
+    inputRef.current = loaded.scenario;
     setInput(loaded.scenario);
     if (accessFailed || (hadStoredValue && loaded.source === "fallback")) {
       setStorageNotice("저장된 계획을 불러오지 못해 기본값을 사용합니다.");
@@ -81,22 +102,32 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     setHydrated(true);
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (skipHydrationSave.current) {
-      skipHydrationSave.current = false;
-      return;
-    }
+  const persistInput = (scenarioInput: FinanceScenarioInput) => {
     try {
-      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, input);
+      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, scenarioInput);
       setStorageNotice(null);
     } catch {
       setStorageNotice("변경 내용은 유지되지만 이 기기에 저장하지 못했습니다.");
     }
-  }, [hydrated, input]);
-  const scenario = useMemo(() => calculateFinanceScenario(input), [input]);
-  const projection = useMemo(() => createFinanceProjectionSeries(input), [input]);
-  const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount), [input]);
+  };
+  const updateInput = (updater: (current: FinanceScenarioInput) => FinanceScenarioInput) => {
+    const next = updater(inputRef.current);
+    inputRef.current = next;
+    setInput(next);
+    persistInput(next);
+  };
+  const replaceInput = (scenarioInput: FinanceScenarioInput) => {
+    inputRef.current = scenarioInput;
+    setInput(scenarioInput);
+    persistInput(scenarioInput);
+  };
+  const calculationReferenceDate = useMemo(
+    () => formatKoreanReferenceDate(referenceDate ?? new Date()),
+    [referenceDate],
+  );
+  const scenario = useMemo(() => calculateFinanceScenario(input, { referenceDate: calculationReferenceDate }), [calculationReferenceDate, input]);
+  const projection = useMemo(() => createFinanceProjectionSeries(input, { referenceDate: calculationReferenceDate }), [calculationReferenceDate, input]);
+  const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount, 1_200, calculationReferenceDate), [calculationReferenceDate, input]);
   const progressPercent = Math.max(0, Math.min(100, Math.round((scenario.netWorth / goalAmount) * 100)));
   const remainingAmount = goalAmount - scenario.netWorth;
 
@@ -119,7 +150,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           </div>
           <dl className="grid grid-cols-2 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] sm:grid-cols-4 sm:divide-x sm:divide-[var(--wallet-line)]">
             <Metric icon={<ArrowDownToLine size={16} />} label="월 수입" value={scenario.monthlyIncome} />
-            <Metric icon={<ArrowUpFromLine size={16} />} label="생활 지출" value={scenario.monthlyNonLoanExpense} />
+            <Metric icon={<ArrowUpFromLine size={16} />} label="생활 지출" value={scenario.monthlyNonLoanExpense} testId="overview-monthly-expense" />
             <Metric icon={<Landmark size={16} />} label="대출 납입" value={scenario.totalLoanPayment} />
             <div aria-live="polite"><Metric icon={<WalletCards size={16} />} label="상환 후 여유" value={scenario.rawMonthlySurplus} warning={scenario.rawMonthlySurplus < 0} testId="overview-monthly-surplus" /></div>
           </dl>
@@ -128,15 +159,26 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
         <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-20 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
           <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
           {hydrated ? (
-            <div className="grid gap-4 sm:grid-cols-2"><MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} /><MoneyInput id="monthly-non-loan-expense" label="월 생활 지출" value={input.monthlyNonLoanExpense} onChange={(monthlyNonLoanExpense) => setInput((current) => ({ ...current, monthlyNonLoanExpense }))} /></div>
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
+              <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} />
+              <div className="flex min-h-28 flex-col justify-center border-t border-[var(--wallet-line)] py-4 sm:border-l sm:border-t-0 sm:pl-5">
+                <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
+                <p className="mt-2 text-2xl font-black tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
+                <a className="mt-2 w-fit text-sm font-bold text-[var(--wallet-primary-strong)] underline-offset-4 hover:underline" href="#expense-management">세부 내역 관리</a>
+              </div>
+            </div>
           ) : (
             <div aria-busy="true" className="min-h-36 border-t border-[var(--wallet-line)] pt-5 text-sm font-semibold text-[var(--wallet-muted)]" role="status">계획 불러오는 중</div>
           )}
         </section>
 
+        <div className="scroll-mt-20" id="expense-management">
+          {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => updateInput((current) => ({ ...current, expenses }))} /> : null}
+        </div>
+
         <div className="scroll-mt-20" id="finance-accounts">
           {hydrated ? (
-            <FinanceScenarioEditor value={input} onChange={setInput} />
+            <FinanceScenarioEditor value={input} onChange={replaceInput} />
           ) : (
             <section aria-busy="true" aria-label="금융 계정 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
           )}
