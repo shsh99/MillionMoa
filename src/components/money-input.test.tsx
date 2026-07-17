@@ -29,6 +29,16 @@ function ControlledMoneyInput({
   );
 }
 
+function ExternalResetHarness() {
+  const [value, setValue] = useState(3_200_000);
+  return (
+    <>
+      <MoneyInput id="monthly-pay" label="월급" value={value} allowNegative onChange={setValue} />
+      <button type="button" onClick={() => setValue(7_500_000)}>외부 값 설정</button>
+    </>
+  );
+}
+
 describe("formatKoreanMoney", () => {
   it("formats integer KRW with natural Korean units", () => {
     expect(formatKoreanMoney(5_200_000)).toBe("오백이십만원");
@@ -148,46 +158,53 @@ describe("MoneyInput", () => {
     expect(screen.getByRole("textbox", { name: "월급" })).toHaveValue("750");
   });
 
+  it("clears an incomplete draft when the controlled value changes externally", async () => {
+    const user = userEvent.setup();
+    render(<ExternalResetHarness />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    await user.clear(input);
+    await user.type(input, "-");
+    expect(input).toHaveValue("-");
+
+    await user.click(screen.getByRole("button", { name: "외부 값 설정" }));
+    expect(input).toHaveValue("750");
+  });
+
+  it("roundtrips integer KRW through four decimal manwon places", () => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={1} onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    expect(input).toHaveValue("0.0001");
+    fireEvent.change(input, { target: { value: "0.0001 " } });
+    expect(onChange).toHaveBeenLastCalledWith(1);
+    expect(input).toHaveValue("0.0001");
+  });
+
   it("gives the textbox a minimum 44px hit area", () => {
     render(<MoneyInput id="monthly-pay" label="월급" value={0} onChange={vi.fn()} />);
 
     expect(screen.getByRole("textbox", { name: "월급" })).toHaveClass("min-h-11");
   });
 
-  it("preserves input focus and selection across controlled updates", () => {
-    const onChange = vi.fn();
-    const { rerender } = render(
-      <MoneyInput id="monthly-pay" label="월급" value={3_200_000} onChange={onChange} />,
-    );
-    const input = screen.getByRole("textbox", { name: "월급" }) as HTMLInputElement;
-    input.focus();
-    input.setSelectionRange(1, 2);
-    fireEvent.select(input);
-
-    rerender(<MoneyInput id="monthly-pay" label="월급" value={3_250_000} onChange={onChange} />);
-
-    expect(input).toHaveFocus();
-    expect(input.selectionStart).toBe(1);
-    expect(input.selectionEnd).toBe(2);
-  });
-
-  it("keeps the caret after the same logical digit when commas are inserted", () => {
-    const { rerender } = render(
-      <MoneyInput id="monthly-pay" label="월급" value={1_230_000} onChange={vi.fn()} />,
-    );
+  it("preserves logical caret positions through controlled insertion, replacement, and deletion", () => {
+    const { unmount } = render(<ControlledMoneyInput initialValue={1_230_000} />);
     const input = screen.getByRole("textbox", { name: "월급" }) as HTMLInputElement;
     input.focus();
 
     fireEvent.change(input, { target: { value: "1234", selectionStart: 4, selectionEnd: 4 } });
-    rerender(<MoneyInput id="monthly-pay" label="월급" value={12_340_000} onChange={vi.fn()} />);
     expect(input).toHaveValue("1,234");
     expect(input.selectionStart).toBe(5);
 
-    rerender(<MoneyInput id="monthly-pay" label="월급" value={1_230_000} onChange={vi.fn()} />);
-    fireEvent.change(input, { target: { value: "1923", selectionStart: 2, selectionEnd: 2 } });
-    rerender(<MoneyInput id="monthly-pay" label="월급" value={19_230_000} onChange={vi.fn()} />);
-    expect(input).toHaveValue("1,923");
+    fireEvent.change(input, { target: { value: "1,934", selectionStart: 3, selectionEnd: 3 } });
+    expect(input).toHaveValue("1,934");
     expect(input.selectionStart).toBe(3);
+
+    fireEvent.change(input, { target: { value: "1,34", selectionStart: 2, selectionEnd: 2 } });
+    expect(input).toHaveValue("134");
+    expect(input.selectionStart).toBe(1);
+    unmount();
   });
 
   it("renders every default quick amount and supports a custom list", () => {
@@ -211,6 +228,49 @@ describe("MoneyInput", () => {
     expect(screen.getByRole("button", { name: "월급에 20만원 더하기" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "월급에 200만원 더하기" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "월급에 10만원 더하기" })).not.toBeInTheDocument();
+  });
+
+  it("filters invalid quick amounts and clamps boundary additions to a safe manwon multiple", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const largestSafeKrwMultiple = Math.floor(Number.MAX_SAFE_INTEGER / 10_000) * 10_000;
+    render(
+      <MoneyInput
+        id="monthly-pay"
+        label="월급"
+        value={largestSafeKrwMultiple - 10_000}
+        onChange={onChange}
+        quickAmountsManwon={[1, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1.5]}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /만원 더하기/ })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "월급에 1만원 더하기" }));
+    await user.click(screen.getByRole("button", { name: "월급에 1만원 더하기" }));
+    expect(onChange).toHaveBeenLastCalledWith(largestSafeKrwMultiple);
+    expect(Number.isSafeInteger(onChange.mock.calls.at(-1)?.[0])).toBe(true);
+  });
+
+  it("associates the unit and preview help with the textbox", () => {
+    render(<MoneyInput id="monthly-pay" label="월급" value={5_200_000} onChange={vi.fn()} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+    const describedBy = input.getAttribute("aria-describedby")?.split(" ") ?? [];
+
+    expect(describedBy).toEqual(["monthly-pay-unit", "monthly-pay-preview"]);
+    expect(document.getElementById(describedBy[0])).toHaveTextContent("만원");
+    expect(document.getElementById(describedBy[1])).toHaveTextContent("오백이십만원");
+  });
+
+  it("provides an accessible sign toggle while retaining the numeric keypad mode", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={500_000} allowNegative onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    expect(input).toHaveAttribute("inputmode", "numeric");
+    await user.click(screen.getByRole("button", { name: "월급 부호 전환" }));
+    expect(onChange).toHaveBeenLastCalledWith(-500_000);
+    expect(input).toHaveValue("-50");
   });
 
   it("hides the Korean money preview when requested", () => {

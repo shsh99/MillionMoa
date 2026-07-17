@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type MoneyInputProps = {
   id: string;
@@ -59,14 +59,27 @@ function normalizeKrw(value: number, allowNegative: boolean) {
 
 function parseManwon(value: string, allowNegative: boolean) {
   const hasLeadingMinus = value.trimStart().startsWith("-");
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return 0;
-  const manwon = Number(digits);
-  // Direct input is clamped to the largest exact KRW value representable in manwon units.
-  const boundedManwon = Number.isSafeInteger(manwon) && manwon <= maxSafeManwon ? manwon : maxSafeManwon;
-  const krw = boundedManwon * 10_000;
-  if (!Number.isSafeInteger(krw)) return hasLeadingMinus && allowNegative ? -maxSafeKrwMultiple : maxSafeKrwMultiple;
+  const sanitized = value.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const [wholePart = "0", ...fractionParts] = sanitized.split(".");
+  const wholeDigits = wholePart.replace(/\D/g, "") || "0";
+  const fractionDigits = fractionParts.join("").slice(0, 4).padEnd(4, "0");
+  const exactKrw = BigInt(wholeDigits) * 10_000n + BigInt(fractionDigits || "0");
+  const boundedKrw = exactKrw > BigInt(maxSafeKrwMultiple) ? BigInt(maxSafeKrwMultiple) : exactKrw;
+  const krw = Number(boundedKrw);
   return normalizeKrw(hasLeadingMinus ? -krw : krw, allowNegative);
+}
+
+function formatManwon(value: number) {
+  const absolute = Math.abs(value);
+  const whole = Math.floor(absolute / 10_000);
+  const fraction = String(absolute % 10_000).padStart(4, "0").replace(/0+$/, "");
+  return `${value < 0 ? "-" : ""}${new Intl.NumberFormat("ko-KR").format(whole)}${fraction ? `.${fraction}` : ""}`;
+}
+
+function boundedQuickAddition(value: number, amountManwon: number, allowNegative: boolean) {
+  const nextValue = value + amountManwon * 10_000;
+  const bounded = Math.max(-maxSafeKrwMultiple, Math.min(maxSafeKrwMultiple, nextValue));
+  return normalizeKrw(bounded, allowNegative);
 }
 
 function digitOffset(value: string, characterOffset: number) {
@@ -99,10 +112,24 @@ export function MoneyInput({
     startAfterMinus: boolean;
     endAfterMinus: boolean;
   } | null>(null);
-  const [incompleteDraft, setIncompleteDraft] = useState<string | null>(null);
+  const [incompleteDraft, setIncompleteDraft] = useState<{
+    text: "" | "-";
+    baseValue: number;
+    ownEmittedValue?: number;
+  } | null>(null);
   const normalizedValue = normalizeKrw(value, allowNegative);
-  const displayValue = new Intl.NumberFormat("ko-KR").format(normalizedValue / 10_000);
-  const renderedValue = incompleteDraft ?? displayValue;
+  const displayValue = formatManwon(normalizedValue);
+  const draftMatchesValue = incompleteDraft
+    && (normalizedValue === incompleteDraft.baseValue || normalizedValue === incompleteDraft.ownEmittedValue);
+  const activeDraft = draftMatchesValue ? incompleteDraft : null;
+  const renderedValue = activeDraft?.text ?? displayValue;
+  const validQuickAmounts = quickAmountsManwon.filter(
+    (amount) => Number.isSafeInteger(amount) && amount > 0 && amount <= maxSafeManwon,
+  );
+
+  useEffect(() => {
+    if (incompleteDraft && !draftMatchesValue) setIncompleteDraft(null);
+  }, [draftMatchesValue, incompleteDraft]);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -139,17 +166,23 @@ export function MoneyInput({
           type="text"
           inputMode="numeric"
           autoComplete="off"
+          aria-describedby={`${id}-unit${showPreview ? ` ${id}-preview` : ""}`}
           className="min-h-11 min-w-0 flex-1 bg-transparent text-right text-base font-bold tabular-nums text-[var(--wallet-ink)] outline-none"
           value={renderedValue}
           onChange={(event) => {
             rememberSelection();
             if (event.target.value === "") {
-              setIncompleteDraft("");
-              if (normalizedValue !== 0) onChange(0);
+              const emitsZero = normalizedValue !== 0;
+              setIncompleteDraft({
+                text: "",
+                baseValue: normalizedValue,
+                ownEmittedValue: emitsZero ? 0 : undefined,
+              });
+              if (emitsZero) onChange(0);
               return;
             }
             if (allowNegative && event.target.value === "-") {
-              setIncompleteDraft("-");
+              setIncompleteDraft({ text: "-", baseValue: normalizedValue });
               return;
             }
             setIncompleteDraft(null);
@@ -157,7 +190,24 @@ export function MoneyInput({
           }}
           onSelect={rememberSelection}
         />
-        <span className="ml-2 text-sm font-semibold text-[var(--wallet-muted)]">만원</span>
+        <span id={`${id}-unit`} className="ml-2 text-sm font-semibold text-[var(--wallet-muted)]">만원</span>
+        {allowNegative && (
+          <button
+            type="button"
+            aria-label={`${label} 부호 전환`}
+            className="ml-1 flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-2xl text-base font-bold text-[var(--wallet-muted)] hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+            onClick={() => {
+              if (normalizedValue === 0) {
+                setIncompleteDraft({ text: activeDraft?.text === "-" ? "" : "-", baseValue: 0 });
+                return;
+              }
+              setIncompleteDraft(null);
+              onChange(-normalizedValue);
+            }}
+          >
+            ±
+          </button>
+        )}
         <button
           type="button"
           aria-label={`${label} 금액 지우기`}
@@ -171,12 +221,12 @@ export function MoneyInput({
         </button>
       </div>
       {showPreview && (
-        <p className="text-right text-sm font-semibold text-[var(--wallet-muted)]" aria-live="polite">
+        <p id={`${id}-preview`} className="text-right text-sm font-semibold text-[var(--wallet-muted)]" aria-live="polite">
           {formatKoreanMoney(normalizedValue)}
         </p>
       )}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={`${label} 빠른 금액 입력`}>
-        {quickAmountsManwon.map((amount) => (
+        {validQuickAmounts.map((amount) => (
           <button
             key={amount}
             type="button"
@@ -184,7 +234,7 @@ export function MoneyInput({
             className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
             onClick={() => {
               setIncompleteDraft(null);
-              onChange(normalizeKrw(normalizedValue + amount * 10_000, allowNegative));
+              onChange(boundedQuickAddition(normalizedValue, amount, allowNegative));
             }}
           >
             +{new Intl.NumberFormat("ko-KR").format(amount)}만
