@@ -1,9 +1,22 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GoalQuickPlanner } from "./goal-quick-planner";
 
 describe("GoalQuickPlanner", () => {
+  afterEach(() => {
+    document.body.style.overflow = "";
+    vi.unstubAllGlobals();
+  });
+
+  function useMobileViewport() {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+  }
+
   it("restores a deep-linked tab and supports arrow-key tab navigation", async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, "", "#planner-loan");
@@ -53,6 +66,128 @@ describe("GoalQuickPlanner", () => {
     expect(screen.getByText("45개월")).toBeInTheDocument();
   });
 
+  it("subtracts cumulatively and clamps category amounts at zero", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    await user.click(screen.getByRole("tab", { name: /월 현금흐름/ }));
+    await user.click(screen.getByRole("button", { name: "생활비 수정" }));
+    await user.click(screen.getByRole("button", { name: "생활비에서 50만원 빼기" }));
+    await user.click(screen.getByRole("button", { name: "생활비에서 100만원 빼기" }));
+
+    expect(screen.getByLabelText("생활비 금액")).toHaveValue("0");
+    expect(screen.getByText("185만원", { selector: "strong" })).toBeInTheDocument();
+  });
+
+  it("closes the editor explicitly or with Escape and restores row focus", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    const editButton = screen.getByRole("button", { name: "예금·현금 수정" });
+    await user.click(editButton);
+    expect(screen.getByRole("dialog", { name: "예금·현금 수정" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "편집 닫기" }));
+    expect(screen.queryByRole("dialog", { name: "예금·현금 수정" })).not.toBeInTheDocument();
+    expect(editButton).toHaveFocus();
+
+    await user.click(editButton);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "예금·현금 수정" })).not.toBeInTheDocument();
+    expect(editButton).toHaveFocus();
+  });
+
+  it("focuses and traps focus inside the mobile editor and cleans up scroll lock", async () => {
+    useMobileViewport();
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    const editButton = screen.getByRole("button", { name: "예금·현금 수정" });
+    await user.click(editButton);
+
+    expect(screen.getByLabelText("예금·현금 이름")).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(screen.getByRole("button", { name: "편집 닫기" })).toHaveFocus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(screen.getByRole("button", { name: "완료" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "편집 닫기" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "완료" }));
+    expect(document.body.style.overflow).toBe("");
+    expect(editButton).toHaveFocus();
+  });
+
+  it("closes from the backdrop without putting it in the tab order", async () => {
+    useMobileViewport();
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    await user.click(screen.getByRole("button", { name: "예금·현금 수정" }));
+    const backdrop = screen.getByTestId("category-editor-backdrop");
+    expect(backdrop).toHaveAttribute("aria-hidden", "true");
+    expect(backdrop).toHaveAttribute("tabindex", "-1");
+    await user.click(backdrop);
+    expect(screen.queryByRole("dialog", { name: "예금·현금 수정" })).not.toBeInTheDocument();
+  });
+
+  it("does not lock body scrolling for the desktop inline editor", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    await user.click(screen.getByRole("button", { name: "예금·현금 수정" }));
+    expect(document.body.style.overflow).toBe("");
+    expect(screen.getByRole("dialog", { name: "예금·현금 수정" })).not.toHaveAttribute("aria-modal");
+  });
+
+  it("marks only the mobile sheet modal and includes safe-area bottom padding", async () => {
+    useMobileViewport();
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    await user.click(screen.getByRole("button", { name: "예금·현금 수정" }));
+    const dialog = screen.getByRole("dialog", { name: "예금·현금 수정" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveClass("pb-[calc(1.25rem+env(safe-area-inset-bottom))]", "sm:pb-4");
+  });
+
+  it("renders the four category tab icons", () => {
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    expect(screen.getByTestId("planner-tab-icon-net-worth")).toBeInTheDocument();
+    expect(screen.getByTestId("planner-tab-icon-cash-flow")).toBeInTheDocument();
+    expect(screen.getByTestId("planner-tab-icon-loan")).toBeInTheDocument();
+    expect(screen.getByTestId("planner-tab-icon-return")).toBeInTheDocument();
+  });
+
+  it("wraps a long valid amount inside the category row without truncation", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-net-worth");
+    render(<GoalQuickPlanner />);
+
+    await user.click(screen.getByRole("button", { name: "예금·현금 수정" }));
+    await user.clear(screen.getByLabelText("예금·현금 금액"));
+    await user.type(screen.getByLabelText("예금·현금 금액"), "123456789012345");
+
+    const amount = screen.getByTestId("category-row-amount-cash");
+    expect(amount).toHaveTextContent("+123,456,789,012,345만원");
+    expect(amount).toHaveClass("min-w-0", "max-w-full", "break-words", "[overflow-wrap:anywhere]");
+    expect(amount).not.toHaveClass("truncate");
+  });
+
   it("adds, removes, and restores category rows", async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, "", "#planner-net-worth");
@@ -68,10 +203,12 @@ describe("GoalQuickPlanner", () => {
     expect(screen.getByText("-500만원", { selector: "strong" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /월 현금흐름/ }));
+    await user.click(screen.getByRole("button", { name: "생활비 수정" }));
     await user.click(screen.getByRole("button", { name: "생활비 삭제" }));
     expect(screen.queryByText("생활비", { selector: "input" })).not.toBeInTheDocument();
     expect(screen.getByText("생활비 항목을 삭제했습니다.")).toBeInTheDocument();
     expect(screen.getByText("185만원", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "생활비 되돌리기" })).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "생활비 되돌리기" }));
     expect(screen.getByRole("button", { name: "생활비 수정" })).toBeInTheDocument();
@@ -93,6 +230,26 @@ describe("GoalQuickPlanner", () => {
     await user.clear(screen.getByLabelText("대출 남은 기간"));
     await user.type(screen.getByLabelText("대출 남은 기간"), "0");
     expect(screen.getByText("대출 남은 기간은 1개월 이상이어야 합니다.")).toBeInTheDocument();
+  });
+
+  it("preserves an existing monthly deficit before subtracting the loan payment", async () => {
+    const user = userEvent.setup();
+    const onSnapshotChange = vi.fn();
+    window.history.replaceState(null, "", "#planner-cash-flow");
+    render(<GoalQuickPlanner onSnapshotChange={onSnapshotChange} />);
+
+    await user.click(screen.getByRole("button", { name: "월 실수령 수정" }));
+    await user.clear(screen.getByLabelText("월 실수령 금액"));
+    await user.type(screen.getByLabelText("월 실수령 금액"), "100");
+
+    await waitFor(() => {
+      const snapshot = onSnapshotChange.mock.lastCall?.[0];
+      expect(snapshot.monthlySurplusWon).toBe(-1_200_000);
+      expect(snapshot.monthlySurplusAfterLoanWon).toBe(
+        snapshot.monthlySurplusWon - snapshot.monthlyLoanPaymentWon,
+      );
+      expect(snapshot.monthsToGoal).toBeNull();
+    });
   });
 
   it("validates return assumptions in the return tab", async () => {
