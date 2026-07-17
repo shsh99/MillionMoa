@@ -37,6 +37,23 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "지출 관리" })).toBeInTheDocument();
+  });
+
+  it("uses categorized expenses as the single cash-flow source", async () => {
+    const user = userEvent.setup();
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "월 생활 지출" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,200,000원");
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+
+    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원");
+    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("814,465원");
   });
 
   it("provides visible destinations for wallet navigation", () => {
@@ -73,7 +90,7 @@ describe("DashboardOverview", () => {
     expect(setItem).not.toHaveBeenCalled();
   });
 
-  it("saves updates as a version 1 envelope under the owner-scoped key", async () => {
+  it("saves updates as a version 2 envelope under the owner-scoped key", async () => {
     const user = userEvent.setup();
     render(<DashboardOverview />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "월 수입" })).toBeEnabled());
@@ -82,8 +99,9 @@ describe("DashboardOverview", () => {
 
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null");
-      expect(saved.version).toBe(1);
+      expect(saved.version).toBe(2);
       expect(saved.scenario.monthlyIncome).toBe(8_200_000);
+      expect(saved.scenario.expenses.length).toBeGreaterThan(0);
     });
   });
 

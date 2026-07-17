@@ -108,7 +108,7 @@ describe("financeScenarioSchema", () => {
   });
 
   it("requires canonical expenses", () => {
-    const { expenses: _expenses, ...withoutExpenses } = validScenario;
+    const withoutExpenses = { ...validScenario, expenses: undefined };
     expect(financeScenarioSchema.safeParse(withoutExpenses).success).toBe(false);
   });
 });

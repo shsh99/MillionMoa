@@ -8,6 +8,7 @@ import { FinanceScenarioEditor } from "./finance-scenario-editor";
 const initialValue: FinanceScenarioInput = {
   assets: [],
   loans: [],
+  expenses: [],
   monthlyIncome: 3_200_000,
   monthlyNonLoanExpense: 2_200_000,
 };

@@ -115,7 +115,8 @@ describe("finance scenario storage", () => {
 
   it("migrates a version 1 aggregate into exactly one monthly living expense", () => {
     const storage = new MemoryStorage();
-    const { expenses: _expenses, ...legacyScenario } = scenario;
+    const legacyScenario: Partial<FinanceScenarioInput> = { ...scenario };
+    delete legacyScenario.expenses;
     storage.values.set(
       getFinanceScenarioStorageKey(OWNER_ID),
       JSON.stringify({ version: 1, scenario: legacyScenario }),
