@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateScenarioMonthsToGoal,
   calculateFinanceScenario,
   calculateLoanScheduleSummary,
   createFinanceProjectionSeries,
@@ -34,6 +35,17 @@ const loans: Loan[] = [
 ];
 
 describe("calculateLoanScheduleSummary", () => {
+  it("rejects loan terms beyond the supported projection boundary", () => {
+    expect(() => calculateLoanScheduleSummary({
+      id: "too-long",
+      name: "비현실적 장기 대출",
+      category: "other",
+      principal: 1_000_000,
+      annualRate: 1,
+      remainingMonths: 10_000,
+      repaymentMethod: "equal-payment",
+    })).toThrow("loan remainingMonths must be between 1 and 1200");
+  });
   it("calculates equal-payment repayment", () => {
     const summary = calculateLoanScheduleSummary({
       ...loans[0],
@@ -138,6 +150,40 @@ describe("calculateFinanceScenario", () => {
 });
 
 describe("createFinanceProjectionSeries", () => {
+  it("uses the changing multi-loan schedule when calculating the goal month", () => {
+    const input = {
+      assets: [{ ...assets[0], balance: 0 }],
+      loans: [{ ...loans[0], principal: 1_200_000, annualRate: 0, remainingMonths: 12 }],
+      monthlyIncome: 200_000,
+      monthlyNonLoanExpense: 0,
+    };
+
+    expect(calculateScenarioMonthsToGoal(input, 1_200_000)).toBe(12);
+  });
+
+  it("spends account balances before carrying an unfunded deficit", () => {
+    const series = createFinanceProjectionSeries({
+      assets: [{ ...assets[0], balance: 1_000_000, annualRate: 0.12 }],
+      loans: [],
+      monthlyIncome: 0,
+      monthlyNonLoanExpense: 500_000,
+    });
+
+    expect(series[1].debtAdjusted).toBeLessThan(-4_900_000);
+    expect(series[1].debtAdjusted).toBeGreaterThan(-5_000_000);
+  });
+
+  it("repays an unfunded cash deficit before allocating later surplus", () => {
+    const series = createFinanceProjectionSeries({
+      assets: [{ ...assets[0], balance: 0, monthlyContribution: 500_000 }],
+      loans: [{ ...loans[0], principal: 1_000_000, remainingMonths: 1, repaymentMethod: "bullet" }],
+      monthlyIncome: 500_000,
+      monthlyNonLoanExpense: 0,
+    }, { maxMonths: 2, intervalMonths: 1 });
+
+    expect(series[1].debtAdjusted).toBe(-500_000);
+    expect(series[2].debtAdjusted).toBe(0);
+  });
   it("returns 12-month chart points through month 120 with a zero baseline", () => {
     const series = createFinanceProjectionSeries({
       assets: [

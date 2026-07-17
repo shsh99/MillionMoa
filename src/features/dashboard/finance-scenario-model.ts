@@ -59,6 +59,7 @@ export type FinanceProjectionPoint = {
 };
 
 const MAX_ANNUAL_RATE = 1;
+const MAX_LOAN_TERM_MONTHS = 1_200;
 
 function assertNonNegativeKrw(value: number, label: string) {
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
@@ -71,8 +72,12 @@ function assertLoan(loan: Loan) {
   if (!Number.isFinite(loan.annualRate) || loan.annualRate < 0 || loan.annualRate > MAX_ANNUAL_RATE) {
     throw new RangeError("loan annualRate must be between 0 and 1");
   }
-  if (!Number.isInteger(loan.remainingMonths) || loan.remainingMonths <= 0) {
-    throw new RangeError("loan remainingMonths must be a positive integer");
+  if (
+    !Number.isInteger(loan.remainingMonths)
+    || loan.remainingMonths <= 0
+    || loan.remainingMonths > MAX_LOAN_TERM_MONTHS
+  ) {
+    throw new RangeError("loan remainingMonths must be between 1 and 1200");
   }
   if (!["equal-payment", "equal-principal", "bullet"].includes(loan.repaymentMethod)) {
     throw new RangeError("loan repaymentMethod is unsupported");
@@ -197,8 +202,25 @@ function advanceProjectionState(
   }
 
   if (cashFlow <= 0) {
-    state.cash += cashFlow;
+    let deficit = -cashFlow;
+    const availableCash = Math.max(0, state.cash);
+    const cashUsed = Math.min(availableCash, deficit);
+    state.cash -= cashUsed;
+    deficit -= cashUsed;
+    for (let index = 0; index < state.accountBalances.length && deficit > 0; index += 1) {
+      const used = Math.min(state.accountBalances[index], deficit);
+      state.accountBalances[index] -= used;
+      deficit -= used;
+    }
+    state.cash -= deficit;
     return;
+  }
+
+  if (state.cash < 0) {
+    const debtRepaid = Math.min(cashFlow, -state.cash);
+    state.cash += debtRepaid;
+    cashFlow -= debtRepaid;
+    if (cashFlow === 0) return;
   }
 
   const requestedContributions = assets.map((asset) => (
@@ -223,6 +245,7 @@ function totalProjectedAssets(state: ProjectionState) {
 
 export function createFinanceProjectionSeries(
   input: FinanceScenarioInput,
+  options: { maxMonths?: number; intervalMonths?: number } = {},
 ): FinanceProjectionPoint[] {
   calculateFinanceScenario(input);
   const initialBalances = input.assets.map((asset) => asset.balance);
@@ -230,7 +253,16 @@ export function createFinanceProjectionSeries(
   const debtAdjustedState: ProjectionState = { accountBalances: [...initialBalances], cash: 0 };
   const points: FinanceProjectionPoint[] = [];
 
-  for (let month = 0; month <= 120; month += 1) {
+  const maxMonths = options.maxMonths ?? 120;
+  const intervalMonths = options.intervalMonths ?? 12;
+  if (!Number.isInteger(maxMonths) || maxMonths < 0 || maxMonths > 1_200) {
+    throw new RangeError("projection maxMonths must be between 0 and 1200");
+  }
+  if (!Number.isInteger(intervalMonths) || intervalMonths <= 0) {
+    throw new RangeError("projection intervalMonths must be a positive integer");
+  }
+
+  for (let month = 0; month <= maxMonths; month += 1) {
     if (month > 0) {
       const preLoanCashFlow = input.monthlyIncome - input.monthlyNonLoanExpense;
       const loanPayment = input.loans.reduce(
@@ -246,7 +278,7 @@ export function createFinanceProjectionSeries(
       );
     }
 
-    if (month % 12 === 0) {
+    if (month % intervalMonths === 0 || month === maxMonths) {
       const remainingLoanBalance = input.loans.reduce(
         (total, loan) => total + loanBalanceAfterMonth(loan, month),
         0,
@@ -263,4 +295,14 @@ export function createFinanceProjectionSeries(
   }
 
   return points;
+}
+
+export function calculateScenarioMonthsToGoal(
+  input: FinanceScenarioInput,
+  goalAmount: number,
+  maxMonths = 1_200,
+) {
+  assertNonNegativeKrw(goalAmount, "goal amount");
+  const series = createFinanceProjectionSeries(input, { maxMonths, intervalMonths: 1 });
+  return series.find((point) => point.debtAdjusted >= goalAmount)?.month ?? null;
 }
