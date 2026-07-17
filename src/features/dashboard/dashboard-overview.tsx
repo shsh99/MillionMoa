@@ -127,11 +127,19 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
 
         <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-20 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
           <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
-          <div className="grid gap-4 sm:grid-cols-2"><MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} /><MoneyInput id="monthly-non-loan-expense" label="월 생활 지출" value={input.monthlyNonLoanExpense} onChange={(monthlyNonLoanExpense) => setInput((current) => ({ ...current, monthlyNonLoanExpense }))} /></div>
+          {hydrated ? (
+            <div className="grid gap-4 sm:grid-cols-2"><MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} /><MoneyInput id="monthly-non-loan-expense" label="월 생활 지출" value={input.monthlyNonLoanExpense} onChange={(monthlyNonLoanExpense) => setInput((current) => ({ ...current, monthlyNonLoanExpense }))} /></div>
+          ) : (
+            <div aria-busy="true" className="min-h-36 border-t border-[var(--wallet-line)] pt-5 text-sm font-semibold text-[var(--wallet-muted)]" role="status">계획 불러오는 중</div>
+          )}
         </section>
 
         <div className="scroll-mt-20" id="finance-accounts">
-          <FinanceScenarioEditor value={input} onChange={setInput} />
+          {hydrated ? (
+            <FinanceScenarioEditor value={input} onChange={setInput} />
+          ) : (
+            <section aria-busy="true" aria-label="금융 계정 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
+          )}
         </div>
         <div className="scroll-mt-20" id="finance-loans">
           <FinanceVisualizations assets={input.assets} loans={input.loans} scenario={scenario} projection={projection} />

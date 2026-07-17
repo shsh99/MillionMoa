@@ -73,10 +73,49 @@ describe("FinanceScenarioEditor", () => {
     await user.type(screen.getByLabelText("자산 계좌 이름"), "남길 계좌");
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
 
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
 
     expect(screen.getByRole("button", { name: /남길 계좌 계좌 선택/ })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /계좌 선택/ })).toHaveLength(1);
+  });
+
+  it("keeps an asset when deletion confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ControlledEditor />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
+
+    expect(confirm).toHaveBeenCalledWith('"새 자산 1" 계좌를 삭제할까요?');
+    expect(screen.getByRole("button", { name: "새 자산 1 계좌 선택" })).toBeInTheDocument();
+  });
+
+  it("requires confirmation before removing a loan", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ControlledEditor />);
+    await user.click(screen.getByRole("tab", { name: "대출" }));
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "선택한 대출 삭제" }));
+    expect(confirm).toHaveBeenCalledWith('"새 대출 1" 대출을 삭제할까요?');
+    expect(screen.getByRole("button", { name: "새 대출 1 대출 선택" })).toBeInTheDocument();
+
+    confirm.mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: "선택한 대출 삭제" }));
+    expect(screen.queryByRole("button", { name: "새 대출 1 대출 선택" })).not.toBeInTheDocument();
+  });
+
+  it("uses stable names and disables autocomplete for editable fields", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    expect(screen.getByLabelText("자산 계좌 이름")).toHaveAttribute("name", "asset-name");
+    expect(screen.getByLabelText("자산 계좌 이름")).toHaveAttribute("autocomplete", "off");
+    expect(screen.getByLabelText("자산 연 수익률")).toHaveAttribute("name", "asset-annual-rate");
   });
 
   it("adds loans and changes the repayment method", async () => {

@@ -92,5 +92,6 @@ describe("FinanceVisualizations", () => {
     expect(within(table).getByText("학자금대출")).toBeInTheDocument();
     expect(within(table).getByText("원금균등")).toBeInTheDocument();
     expect(within(table).getAllByText(/만원/).length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByRole("region", { name: "대출 상환표 가로 스크롤" })).toHaveAttribute("tabindex", "0");
   });
 });

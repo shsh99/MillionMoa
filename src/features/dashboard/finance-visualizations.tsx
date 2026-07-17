@@ -219,7 +219,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
 
       <Panel icon={<Landmark size={19} strokeWidth={1.8} />} title="대출 상환 현황" description="첫 달 예상 납입액 기준" className="lg:col-span-2" tone="coral">
         {loans.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-[#e9edf2]">
+          <div aria-label="대출 상환표 가로 스크롤" className="overflow-x-auto rounded-xl border border-[#e9edf2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]" role="region" tabIndex={0}>
             <table aria-label="대출별 상환 현황" className="w-full min-w-[620px] border-collapse text-left text-sm">
               <thead className="bg-[#f7f9fb] text-xs font-semibold text-[#697587]">
                 <tr>

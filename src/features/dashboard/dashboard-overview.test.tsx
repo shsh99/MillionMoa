@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
 import { DashboardOverview, formatExpectedMonth, initialFinanceScenario } from "./dashboard-overview";
 import { getFinanceScenarioStorageKey } from "./finance-scenario-storage";
 
@@ -19,6 +20,15 @@ describe("formatExpectedMonth", () => {
 });
 
 describe("DashboardOverview", () => {
+  it("renders a stable non-editable loading state before persistence hydration", () => {
+    const html = renderToString(<DashboardOverview />);
+
+    expect(html).toContain("계획 불러오는 중");
+    expect(html).toContain('aria-busy="true"');
+    expect(html).not.toContain('name="monthly-income"');
+    expect(html).not.toContain('aria-label="자산 및 대출 편집"');
+  });
+
   it("shows one coherent multi-account scenario with visual evidence", () => {
     render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
 
