@@ -23,6 +23,36 @@ const initialItems: FinanceCategoryItem[] = [
   { id: "reserve", kind: "expense", name: "비상금", amountMan: "30" },
 ];
 
+export type PlannerSnapshot = {
+  assetWon: number;
+  liabilityWon: number;
+  netWorthWon: number;
+  incomeWon: number;
+  expenseWon: number;
+  monthlySurplusWon: number;
+  monthlyLoanPaymentWon: number;
+  monthlySurplusAfterLoanWon: number;
+  totalLoanInterestWon: number;
+  monthsToGoal: number | null;
+  monthsDelayedByLoan: number | null;
+  hasPossibleLoanExpenseDuplicate: boolean;
+};
+
+export const initialPlannerSnapshot: PlannerSnapshot = {
+  assetWon: 10_000_000,
+  liabilityWon: 0,
+  netWorthWon: 10_000_000,
+  incomeWon: 3_200_000,
+  expenseWon: 2_200_000,
+  monthlySurplusWon: 1_000_000,
+  monthlyLoanPaymentWon: 559_290,
+  monthlySurplusAfterLoanWon: 440_710,
+  totalLoanInterestWon: 3_557_400,
+  monthsToGoal: 90,
+  monthsDelayedByLoan: 113,
+  hasPossibleLoanExpenseDuplicate: false,
+};
+
 type PlannerTab = "net-worth" | "cash-flow" | "loan" | "return";
 
 const tabs: Array<{ id: PlannerTab; label: string }> = [
@@ -122,7 +152,7 @@ function CategoryRow({
         <button
           aria-controls={controlsId}
           aria-expanded={expanded}
-          className="min-h-11 rounded-lg px-3 text-sm font-bold text-[#2f6fed] hover:bg-[#eef4ff]"
+          className="min-h-11 rounded-lg px-3 text-sm font-bold text-[#087a63] hover:bg-[#eaf8f3]"
           onClick={onToggle}
           type="button"
         >
@@ -145,7 +175,7 @@ function CategoryRow({
               <input
                 aria-label={`${itemLabel} 이름`}
                 autoComplete="off"
-                className="h-11 min-w-0 rounded-lg border border-[#d8e0ea] bg-white px-3 text-base font-bold text-[#18202b] outline-none focus:border-[#2f6fed]"
+                className="h-11 min-w-0 rounded-lg border border-[#d8e0ea] bg-white px-3 text-base font-bold text-[#18202b] outline-none focus:border-[#087a63] focus:ring-2 focus:ring-[#d7f1eb]"
                 id={`category-name-${item.id}`}
                 maxLength={18}
                 name={`category-${item.id}-name`}
@@ -155,7 +185,7 @@ function CategoryRow({
             </label>
             <label className="grid gap-1.5 text-xs font-bold text-[#697587]">
               금액
-              <span className="flex h-11 items-center rounded-lg border border-[#d8e0ea] bg-white px-3 focus-within:border-[#2f6fed]">
+              <span className="flex h-11 items-center rounded-lg border border-[#d8e0ea] bg-white px-3 focus-within:border-[#087a63] focus-within:ring-2 focus-within:ring-[#d7f1eb]">
                 <input
                   aria-label={`${itemLabel} 금액`}
                   autoComplete="off"
@@ -173,7 +203,7 @@ function CategoryRow({
             {[10, 50, 100, 500].map((quickAmount) => (
               <button
                 aria-label={`${itemLabel}에 ${quickAmount}만원 더하기`}
-                className="min-h-11 shrink-0 rounded-lg border border-[#d8e0ea] bg-white px-3 text-sm font-black text-[#2f6fed] active:scale-[0.98]"
+                className="min-h-11 shrink-0 rounded-lg border border-[#d8e0ea] bg-white px-3 text-sm font-black text-[#087a63] active:scale-[0.98]"
                 key={quickAmount}
                 onClick={() => onChange({ amountMan: String(amount + quickAmount) })}
                 type="button"
@@ -229,7 +259,7 @@ function CategoryGroup({
         </div>
         <button
           aria-label={meta.addLabel}
-          className="min-h-11 rounded-lg px-3 text-sm font-black text-[#2f6fed] hover:bg-[#eef4ff]"
+          className="min-h-11 rounded-lg px-3 text-sm font-black text-[#087a63] hover:bg-[#eaf8f3]"
           aria-expanded={adding}
           onClick={() => onRequestAdd(kind)}
           type="button"
@@ -243,7 +273,7 @@ function CategoryGroup({
           {kindPresets[kind].map((preset) => (
             <button
               aria-label={`${preset} 추가`}
-              className="min-h-11 rounded-lg bg-white px-2 text-sm font-bold text-[#344154] ring-1 ring-[#d8e0ea] hover:text-[#2f6fed]"
+              className="min-h-11 rounded-lg bg-white px-2 text-sm font-bold text-[#344154] ring-1 ring-[#d8e0ea] hover:text-[#087a63]"
               key={preset}
               onClick={() => onAddPreset(kind, preset)}
               type="button"
@@ -277,7 +307,7 @@ function CompactMoneyInput({ label, value, onChange }: { label: string; value: s
   return (
     <label className="grid gap-2 text-sm font-black text-[#18202b]">
       {label}
-      <span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] bg-white px-3 focus-within:border-[#2f6fed] focus-within:ring-2 focus-within:ring-[#dbeafe]">
+      <span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] bg-white px-3 focus-within:border-[#087a63] focus-within:ring-2 focus-within:ring-[#d7f1eb]">
         <input
           aria-label={label}
           className="min-w-0 flex-1 bg-transparent text-right text-lg font-black tabular-nums outline-none"
@@ -291,7 +321,7 @@ function CompactMoneyInput({ label, value, onChange }: { label: string; value: s
   );
 }
 
-export function GoalQuickPlanner() {
+export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (snapshot: PlannerSnapshot) => void }) {
   const [items, setItems] = useState(initialItems);
   const [activeTab, setActiveTab] = useState<PlannerTab>("net-worth");
   const [addingKind, setAddingKind] = useState<FinanceCategoryKind | null>(null);
@@ -341,6 +371,23 @@ export function GoalQuickPlanner() {
     baselineMonthlyContribution: monthlyContributionWon,
     annualReturnRate: annualReturnValue / 100,
   }), [annualReturnValue, currentAmountWon, loanPrincipalMan, loanRateValue, loanTermValue, monthlyContributionWon]);
+
+  useEffect(() => {
+    onSnapshotChange?.({
+      assetWon: totals.assetMan * manWon,
+      liabilityWon: totals.liabilityMan * manWon,
+      netWorthWon: currentAmountWon,
+      incomeWon: totals.incomeMan * manWon,
+      expenseWon: totals.expenseMan * manWon,
+      monthlySurplusWon: totals.monthlyContributionMan * manWon,
+      monthlyLoanPaymentWon: loanImpact.totalMonthlyLoanPayment ?? 0,
+      monthlySurplusAfterLoanWon: monthlyContributionWon - (loanImpact.totalMonthlyLoanPayment ?? 0),
+      totalLoanInterestWon: loanImpact.totalInterest ?? 0,
+      monthsToGoal: loanImpact.status === "available" ? loanImpact.changedMonthsToGoal : (result.reached ? result.months : null),
+      monthsDelayedByLoan: loanImpact.status === "available" ? loanImpact.monthsDelayed : null,
+      hasPossibleLoanExpenseDuplicate: items.some((item) => item.kind === "expense" && /대출|원리금|상환/.test(item.name)),
+    });
+  }, [currentAmountWon, items, loanImpact, monthlyContributionWon, onSnapshotChange, result, totals]);
 
   const invalidReturn = result.reason === "invalid-return-rate";
   const failureMessage = invalidReturn
@@ -416,7 +463,7 @@ export function GoalQuickPlanner() {
     <section className="min-w-0 overflow-hidden rounded-lg border border-[#d8e0ea] bg-white" aria-labelledby="goal-quick-planner-title">
       <header className="flex items-start justify-between gap-3 border-b border-[#e8edf3] px-5 py-4">
         <div className="min-w-0">
-          <p className="text-xs font-black text-[#2f6fed]">내 숫자로 계산</p>
+          <p className="text-xs font-black text-[#087a63]">내 숫자로 계산</p>
           <h2 className="mt-1 scroll-mt-24 text-xl font-black text-[#18202b]" id="goal-quick-planner-title">1억 플랜 조정</h2>
         </div>
         <button className="min-h-11 rounded-lg px-3 text-sm font-bold text-[#697587] hover:bg-[#f1f4f8]" onClick={reset} type="button">초기화</button>
@@ -463,7 +510,7 @@ export function GoalQuickPlanner() {
           <button
             aria-controls={`panel-${tab.id}`}
             aria-selected={activeTab === tab.id}
-            className={`min-h-14 border-b-2 px-1 text-xs font-black ${activeTab === tab.id ? "border-[#2f6fed] bg-[#f6f9ff] text-[#2f6fed]" : "border-transparent text-[#697587]"}`}
+            className={`min-h-14 border-b-2 px-1 text-xs font-black ${activeTab === tab.id ? "border-[#087a63] bg-[#f2faf7] text-[#087a63]" : "border-transparent text-[#697587]"}`}
             id={`tab-${tab.id}`}
             key={tab.id}
             onClick={() => selectTab(tab.id)}
@@ -497,8 +544,8 @@ export function GoalQuickPlanner() {
             <div className="mt-5 grid gap-4">
               <CompactMoneyInput label="대출 원금" value={loanPrincipalMan} onChange={setLoanPrincipalMan} />
               <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-2 text-sm font-black text-[#18202b]">대출 금리<span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] px-3 focus-within:border-[#2f6fed]"><input aria-describedby="loan-error" aria-label="대출 금리" className="min-w-0 flex-1 text-right text-base font-black outline-none" inputMode="decimal" onChange={(event) => setLoanAnnualRatePercent(sanitizeDecimal(event.target.value))} value={loanAnnualRatePercent}/><span className="ml-1 text-sm text-[#697587]">%</span></span></label>
-                <label className="grid gap-2 text-sm font-black text-[#18202b]">남은 기간<span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] px-3 focus-within:border-[#2f6fed]"><input aria-describedby="loan-error" aria-label="대출 남은 기간" className="min-w-0 flex-1 text-right text-base font-black outline-none" inputMode="numeric" onChange={(event) => setLoanTermMonths(sanitizeMoney(event.target.value))} value={displayMoneyInput(loanTermMonths)}/><span className="ml-1 text-sm text-[#697587]">개월</span></span></label>
+                <label className="grid gap-2 text-sm font-black text-[#18202b]">대출 금리<span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] px-3 focus-within:border-[#087a63] focus-within:ring-2 focus-within:ring-[#d7f1eb]"><input aria-describedby="loan-error" aria-label="대출 금리" className="min-w-0 flex-1 text-right text-base font-black outline-none" inputMode="decimal" name="loan-rate" onChange={(event) => setLoanAnnualRatePercent(sanitizeDecimal(event.target.value))} value={loanAnnualRatePercent}/><span className="ml-1 text-sm text-[#697587]">%</span></span></label>
+                <label className="grid gap-2 text-sm font-black text-[#18202b]">남은 기간<span className="flex h-12 items-center rounded-lg border border-[#d8e0ea] px-3 focus-within:border-[#087a63] focus-within:ring-2 focus-within:ring-[#d7f1eb]"><input aria-describedby="loan-error" aria-label="대출 남은 기간" className="min-w-0 flex-1 text-right text-base font-black outline-none" inputMode="numeric" name="loan-term" onChange={(event) => setLoanTermMonths(sanitizeMoney(event.target.value))} value={displayMoneyInput(loanTermMonths)}/><span className="ml-1 text-sm text-[#697587]">개월</span></span></label>
               </div>
             </div>
             <dl className="mt-5 divide-y divide-[#e8edf3] rounded-lg bg-[#f5f7fa] px-4">
@@ -512,8 +559,8 @@ export function GoalQuickPlanner() {
           <section className="py-5" aria-labelledby="return-title">
             <h3 className="text-base font-black text-[#18202b]" id="return-title">수익률 가정</h3>
             <p className="mt-1 text-sm font-semibold text-[#697587]">목표 계산에만 사용하는 시나리오 값입니다.</p>
-            <label className="mt-5 grid gap-2 text-sm font-black text-[#18202b]">연 예상 수익률<span className="flex h-14 items-center rounded-lg border border-[#d8e0ea] px-4 focus-within:border-[#2f6fed] focus-within:ring-2 focus-within:ring-[#dbeafe]"><input aria-describedby="annual-return-help" aria-invalid={invalidReturn} aria-label="연 예상 수익률" className="min-w-0 flex-1 text-right text-xl font-black outline-none" inputMode="decimal" onChange={(event) => setAnnualReturnPercent(sanitizeDecimal(event.target.value))} value={annualReturnPercent}/><span className="ml-2 font-black text-[#697587]">%</span></span></label>
-            <div className="mt-3 grid grid-cols-4 gap-2">{[0, 2, 4, 6].map((value) => <button className="min-h-11 rounded-lg border border-[#d8e0ea] text-sm font-black text-[#2f6fed] hover:bg-[#eef4ff]" key={value} onClick={() => setAnnualReturnPercent(String(value))} type="button">{value}%</button>)}</div>
+            <label className="mt-5 grid gap-2 text-sm font-black text-[#18202b]">연 예상 수익률<span className="flex h-14 items-center rounded-lg border border-[#d8e0ea] px-4 focus-within:border-[#087a63] focus-within:ring-2 focus-within:ring-[#d7f1eb]"><input aria-describedby="annual-return-help" aria-invalid={invalidReturn} aria-label="연 예상 수익률" className="min-w-0 flex-1 text-right text-xl font-black outline-none" inputMode="decimal" name="annual-return" onChange={(event) => setAnnualReturnPercent(sanitizeDecimal(event.target.value))} value={annualReturnPercent}/><span className="ml-2 font-black text-[#697587]">%</span></span></label>
+            <div className="mt-3 grid grid-cols-4 gap-2">{[0, 2, 4, 6].map((value) => <button className="min-h-11 rounded-lg border border-[#d8e0ea] text-sm font-black text-[#087a63] hover:bg-[#eaf8f3]" key={value} onClick={() => setAnnualReturnPercent(String(value))} type="button">{value}%</button>)}</div>
             {invalidReturn ? <p className="mt-3 rounded-lg bg-[#fff8e8] p-3 text-sm font-bold text-[#7c5a18]">{failureMessage}</p> : null}
             {annualReturnValue > 20 ? <p className="mt-3 rounded-lg bg-[#fff8e8] p-3 text-sm font-bold text-[#7c5a18]">높은 연 수익률 가정은 실제 결과와 크게 달라질 수 있습니다.</p> : null}
             <p className="mt-4 text-xs leading-5 text-[#697587]" id="annual-return-help">입력한 수익률과 대출 조건에 따른 단순 추정이며 실제 결과는 보장되지 않습니다.</p>

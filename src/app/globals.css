@@ -9,9 +9,9 @@
   --money-line: #e7ebf0;
   --money-page: #f6f8fb;
   --money-panel: #ffffff;
-  --money-blue: #2563eb;
-  --money-blue-soft: #eef4ff;
-  --money-teal: #0f9f8f;
+  --money-blue: #087a63;
+  --money-blue-soft: #eaf8f3;
+  --money-teal: #087a63;
   --money-amber: #b7791f;
 }
 
@@ -23,11 +23,11 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--money-blue);
+  outline: 2px solid var(--money-teal);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: #dbeafe;
+  background: #d7f1eb;
   color: var(--money-ink);
 }
