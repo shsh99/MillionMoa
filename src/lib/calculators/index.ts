@@ -46,6 +46,13 @@ export {
   type GoalTimelineResult,
 } from "./goal-timeline";
 export {
+  calculateLoanImpact,
+  type LoanImpactInput,
+  type LoanImpactReason,
+  type LoanImpactResult,
+  type LoanImpactStatus,
+} from "./loan-impact";
+export {
   compareScenarioProjections,
   type ComparedScenario,
   type ScenarioComparisonInput,

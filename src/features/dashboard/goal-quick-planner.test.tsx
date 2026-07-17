@@ -9,18 +9,17 @@ describe("GoalQuickPlanner", () => {
 
     render(<GoalQuickPlanner />);
 
-    await user.clear(screen.getByLabelText("현재 자산"));
-    await user.type(screen.getByLabelText("현재 자산"), "1000");
+    await user.clear(screen.getByLabelText("현재 순자산"));
+    await user.type(screen.getByLabelText("현재 순자산"), "1000");
     await user.clear(screen.getByLabelText("월 저축/투자 가능액"));
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "100");
     await user.clear(screen.getByLabelText("연 예상 수익률"));
     await user.type(screen.getByLabelText("연 예상 수익률"), "0");
 
-    expect(screen.getByText("예상 소요 기간")).toBeInTheDocument();
+    expect(screen.getByText("대출 전 목표 기간")).toBeInTheDocument();
     expect(screen.getByText("90개월")).toBeInTheDocument();
     expect(screen.getByText("7년 6개월")).toBeInTheDocument();
-    expect(screen.getByText(/입력한 수익률 가정에 따른 단순 추정/)).toBeInTheDocument();
-    expect(screen.getByText(/연 수익률 0% 가정 기준입니다/)).toBeInTheDocument();
+    expect(screen.getByText(/대출 조건에 따른 단순 추정/)).toBeInTheDocument();
   });
 
   it("sanitizes pasted money text and keeps calculations in KRW", async () => {
@@ -28,30 +27,81 @@ describe("GoalQuickPlanner", () => {
 
     render(<GoalQuickPlanner />);
 
-    await user.clear(screen.getByLabelText("현재 자산"));
-    await user.type(screen.getByLabelText("현재 자산"), "1,000만원");
+    await user.clear(screen.getByLabelText("현재 순자산"));
+    await user.type(screen.getByLabelText("현재 순자산"), "1,000만원");
     await user.clear(screen.getByLabelText("월 저축/투자 가능액"));
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "100만원");
 
-    expect(screen.getByLabelText("현재 자산")).toHaveValue("1000");
+    expect(screen.getByLabelText("현재 순자산")).toHaveValue("1,000");
     expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("100");
     expect(screen.getByText("90개월")).toBeInTheDocument();
-    expect(screen.getByText(/현재 자산 10,000,000원, 월 납입액 1,000,000원/)).toBeInTheDocument();
+    expect(screen.getByText("10,000,000원")).toBeInTheDocument();
   });
 
-  it("supports quick presets and stepper controls", async () => {
+  it("adds quick money buttons cumulatively and supports stepper controls", async () => {
     const user = userEvent.setup();
 
     render(<GoalQuickPlanner />);
 
-    await user.click(screen.getByRole("button", { name: "50만원" }));
-    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("50");
+    await user.click(screen.getByRole("button", { name: "+50만원" }));
+    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("150");
 
     await user.click(screen.getByRole("button", { name: "월 저축/투자 가능액 10만원 늘리기" }));
-    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("60");
+    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("160");
 
     await user.click(screen.getByRole("button", { name: "월 저축/투자 가능액 10만원 줄이기" }));
+    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("150");
+  });
+
+  it("supports subtract mode, clearing, and negative net asset input", async () => {
+    const user = userEvent.setup();
+
+    render(<GoalQuickPlanner />);
+
+    await user.clear(screen.getByLabelText("현재 순자산"));
+    await user.type(screen.getByLabelText("현재 순자산"), "-500");
+    expect(screen.getByLabelText("현재 순자산")).toHaveValue("-500");
+    expect(screen.getByText("-5,000,000원")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "빼기" })[1]);
+    await user.click(screen.getByRole("button", { name: "-50만원" }));
     expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("50");
+
+    await user.click(screen.getByRole("button", { name: "월 저축/투자 가능액 지우기" }));
+    expect(screen.getByLabelText("월 저축/투자 가능액")).toHaveValue("0");
+  });
+
+  it("shows loan repayment impact on monthly saving power", async () => {
+    render(<GoalQuickPlanner />);
+
+    expect(screen.getByRole("heading", { name: "대출 상환" })).toBeInTheDocument();
+    expect(screen.getByLabelText("대출 원금")).toHaveValue("3,000");
+    expect(screen.getByText("예상 월 상환액")).toBeInTheDocument();
+    expect(screen.getByText("첫 달 이자")).toBeInTheDocument();
+    expect(screen.getByText("총 이자 추정")).toBeInTheDocument();
+  });
+
+  it("shows a loan validation message instead of masking invalid loan inputs", async () => {
+    const user = userEvent.setup();
+
+    render(<GoalQuickPlanner />);
+
+    await user.clear(screen.getByLabelText("대출 남은 기간"));
+    await user.type(screen.getByLabelText("대출 남은 기간"), "0");
+
+    expect(screen.getByText("대출 남은 기간은 1개월 이상이어야 합니다.")).toBeInTheDocument();
+    expect(screen.getAllByText("확인 필요").length).toBeGreaterThan(0);
+  });
+
+  it("treats blank loan rate as invalid instead of a zero percent loan", async () => {
+    const user = userEvent.setup();
+
+    render(<GoalQuickPlanner />);
+
+    await user.clear(screen.getByLabelText("대출 금리"));
+
+    expect(screen.getByText("대출 금리와 남은 기간을 숫자로 입력해 주세요.")).toBeInTheDocument();
+    expect(screen.getAllByText("확인 필요").length).toBeGreaterThan(0);
   });
 
   it("shows an unreachable state when monthly contribution is zero", async () => {
@@ -59,8 +109,8 @@ describe("GoalQuickPlanner", () => {
 
     render(<GoalQuickPlanner />);
 
-    await user.clear(screen.getByLabelText("현재 자산"));
-    await user.type(screen.getByLabelText("현재 자산"), "1000");
+    await user.clear(screen.getByLabelText("현재 순자산"));
+    await user.type(screen.getByLabelText("현재 순자산"), "1000");
     await user.clear(screen.getByLabelText("월 저축/투자 가능액"));
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "0");
     await user.clear(screen.getByLabelText("연 예상 수익률"));
@@ -86,8 +136,8 @@ describe("GoalQuickPlanner", () => {
 
     render(<GoalQuickPlanner />);
 
-    await user.clear(screen.getByLabelText("현재 자산"));
-    await user.type(screen.getByLabelText("현재 자산"), "0");
+    await user.clear(screen.getByLabelText("현재 순자산"));
+    await user.type(screen.getByLabelText("현재 순자산"), "0");
     await user.clear(screen.getByLabelText("월 저축/투자 가능액"));
     await user.type(screen.getByLabelText("월 저축/투자 가능액"), "1");
     await user.clear(screen.getByLabelText("연 예상 수익률"));

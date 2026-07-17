@@ -7,13 +7,20 @@ const navItems = [
   { label: "계산기", href: "#goal-quick-planner-title" },
 ];
 
+const bottomNavItems = [
+  { label: "홈", href: "/" },
+  { label: "계산", href: "#goal-quick-planner-title" },
+  { label: "계좌", href: "#allocation-title" },
+  { label: "대출", href: "#loan-impact-title" },
+];
+
 type AppShellProps = {
   children: ReactNode;
 };
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-[#111827]">
+    <div className="min-h-screen bg-[#f6f8fb] pb-20 text-[#111827] md:pb-0">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[#111827] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -34,7 +41,7 @@ export function AppShell({ children }: AppShellProps) {
               목표 1억
             </span>
           </div>
-          <nav aria-label="주요 메뉴" className="flex gap-1 overflow-x-auto pb-1 lg:pb-0">
+          <nav aria-label="주요 메뉴" className="hidden gap-1 overflow-x-auto pb-1 md:flex lg:pb-0">
             {navItems.map((item) => (
               <Link
                 key={item.label}
@@ -49,6 +56,22 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       <main id="main-content">{children}</main>
+
+      <nav
+        aria-label="모바일 주요 메뉴"
+        className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-4 rounded-lg border border-[#dbe3ef] bg-white/95 p-2 shadow-[0_18px_48px_rgba(31,41,55,0.20)] backdrop-blur md:hidden"
+      >
+        {bottomNavItems.map((item) => (
+          <Link
+            className="flex min-h-12 flex-col items-center justify-center rounded-lg text-xs font-black text-[#6b7280] transition hover:bg-[#eef6ff] hover:text-[#2563eb] active:scale-[0.98]"
+            href={item.href}
+            key={item.label}
+          >
+            <span className="mb-1 h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }
