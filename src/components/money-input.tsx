@@ -143,8 +143,13 @@ export function MoneyInput({
           value={renderedValue}
           onChange={(event) => {
             rememberSelection();
-            if (event.target.value === "" || (allowNegative && event.target.value === "-")) {
-              setIncompleteDraft(event.target.value);
+            if (event.target.value === "") {
+              setIncompleteDraft("");
+              if (normalizedValue !== 0) onChange(0);
+              return;
+            }
+            if (allowNegative && event.target.value === "-") {
+              setIncompleteDraft("-");
               return;
             }
             setIncompleteDraft(null);

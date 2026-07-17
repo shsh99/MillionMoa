@@ -124,6 +124,19 @@ describe("MoneyInput", () => {
     expect(onChange).toHaveBeenLastCalledWith(-500_000);
   });
 
+  it("emits zero and updates the preview when a nonzero edit is cleared", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={3_200_000} onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    await user.clear(input);
+
+    expect(onChange).toHaveBeenLastCalledWith(0);
+    expect(input).toHaveValue("");
+    expect(screen.getByText("영원")).toBeInTheDocument();
+  });
+
   it("synchronizes its display when an external value replaces a complete draft", () => {
     const onChange = vi.fn();
     const { rerender } = render(
