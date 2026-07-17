@@ -232,6 +232,26 @@ describe("GoalQuickPlanner", () => {
     expect(screen.getByText("대출 남은 기간은 1개월 이상이어야 합니다.")).toBeInTheDocument();
   });
 
+  it("preserves an existing monthly deficit before subtracting the loan payment", async () => {
+    const user = userEvent.setup();
+    const onSnapshotChange = vi.fn();
+    window.history.replaceState(null, "", "#planner-cash-flow");
+    render(<GoalQuickPlanner onSnapshotChange={onSnapshotChange} />);
+
+    await user.click(screen.getByRole("button", { name: "월 실수령 수정" }));
+    await user.clear(screen.getByLabelText("월 실수령 금액"));
+    await user.type(screen.getByLabelText("월 실수령 금액"), "100");
+
+    await waitFor(() => {
+      const snapshot = onSnapshotChange.mock.lastCall?.[0];
+      expect(snapshot.monthlySurplusWon).toBe(-1_200_000);
+      expect(snapshot.monthlySurplusAfterLoanWon).toBe(
+        snapshot.monthlySurplusWon - snapshot.monthlyLoanPaymentWon,
+      );
+      expect(snapshot.monthsToGoal).toBeNull();
+    });
+  });
+
   it("validates return assumptions in the return tab", async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, "", "#planner-net-worth");

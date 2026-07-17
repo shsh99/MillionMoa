@@ -7,7 +7,10 @@ describe("AppShell", () => {
   it("preserves navigation anchors and exposes an active icon-based mobile nav", () => {
     render(
       <AppShell>
-        <p>대시보드 내용</p>
+        <div id="goal-quick-planner-title">계산기</div>
+        <div id="planner-cash-flow">월 현금흐름</div>
+        <div id="planner-net-worth">순자산</div>
+        <div id="planner-loan">대출</div>
       </AppShell>,
     );
 
@@ -30,7 +33,7 @@ describe("AppShell", () => {
     expect(within(desktopNav).getByRole("link", { name: "대시보드" })).toHaveAttribute("href", "/");
     expect(within(desktopNav).getByRole("link", { name: "월급 배분" })).toHaveAttribute(
       "href",
-      "#allocation-title",
+      "#planner-cash-flow",
     );
     expect(within(desktopNav).getByRole("link", { name: "계산기" })).toHaveAttribute(
       "href",
@@ -42,14 +45,15 @@ describe("AppShell", () => {
     const expectedItems = [
       ["홈", "/"],
       ["계산", "#goal-quick-planner-title"],
-      ["계좌", "#allocation-title"],
-      ["대출", "#loan-impact-title"],
+      ["계좌", "#planner-net-worth"],
+      ["대출", "#planner-loan"],
     ] as const;
 
     for (const [label, href] of expectedItems) {
       const link = within(mobileNav).getByRole("link", { name: label });
       expect(link).toHaveAttribute("href", href);
       expect(link.querySelector("svg")).toBeInTheDocument();
+      if (href.startsWith("#")) expect(document.querySelector(href)).toBeInTheDocument();
     }
 
     expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveAttribute(
@@ -58,12 +62,23 @@ describe("AppShell", () => {
     );
 
     act(() => {
-      window.history.replaceState(null, "", "#allocation-title");
+      window.history.replaceState(null, "", "#planner-net-worth");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
     expect(within(mobileNav).getByRole("link", { name: "홈" })).not.toHaveAttribute("aria-current");
     expect(within(mobileNav).getByRole("link", { name: "계좌" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    act(() => {
+      window.history.replaceState(null, "", "#planner-loan");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    expect(within(mobileNav).getByRole("link", { name: "계좌" })).not.toHaveAttribute("aria-current");
+    expect(within(mobileNav).getByRole("link", { name: "대출" })).toHaveAttribute(
       "aria-current",
       "page",
     );

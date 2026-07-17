@@ -6,15 +6,15 @@ import { type ReactNode, useEffect, useState } from "react";
 
 const navItems = [
   { label: "대시보드", href: "/" },
-  { label: "월급 배분", href: "#allocation-title" },
+  { label: "월급 배분", href: "#planner-cash-flow" },
   { label: "계산기", href: "#goal-quick-planner-title" },
 ];
 
 const bottomNavItems = [
   { label: "홈", href: "/", icon: Home },
   { label: "계산", href: "#goal-quick-planner-title", icon: WalletCards },
-  { label: "계좌", href: "#allocation-title", icon: Landmark },
-  { label: "대출", href: "#loan-impact-title", icon: ChartNoAxesCombined },
+  { label: "계좌", href: "#planner-net-worth", icon: Landmark },
+  { label: "대출", href: "#planner-loan", icon: ChartNoAxesCombined },
 ];
 
 type AppShellProps = {

@@ -412,7 +412,8 @@ export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (sna
 
   const totals = useMemo(() => calculateCategoryTotals(items), [items]);
   const currentAmountWon = totals.netWorthMan * manWon;
-  const monthlyContributionWon = Math.max(0, totals.monthlyContributionMan) * manWon;
+  const monthlySurplusWon = totals.monthlyContributionMan * manWon;
+  const monthlyContributionWon = Math.max(0, monthlySurplusWon);
   const annualReturnValue = strictNumber(annualReturnPercent);
   const loanRateValue = strictNumber(loanAnnualRatePercent);
   const loanTermValue = strictNumber(loanTermMonths);
@@ -441,15 +442,15 @@ export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (sna
       netWorthWon: currentAmountWon,
       incomeWon: totals.incomeMan * manWon,
       expenseWon: totals.expenseMan * manWon,
-      monthlySurplusWon: totals.monthlyContributionMan * manWon,
+      monthlySurplusWon,
       monthlyLoanPaymentWon: loanImpact.totalMonthlyLoanPayment ?? 0,
-      monthlySurplusAfterLoanWon: monthlyContributionWon - (loanImpact.totalMonthlyLoanPayment ?? 0),
+      monthlySurplusAfterLoanWon: monthlySurplusWon - (loanImpact.totalMonthlyLoanPayment ?? 0),
       totalLoanInterestWon: loanImpact.totalInterest ?? 0,
       monthsToGoal: loanImpact.status === "available" ? loanImpact.changedMonthsToGoal : (result.reached ? result.months : null),
       monthsDelayedByLoan: loanImpact.status === "available" ? loanImpact.monthsDelayed : null,
       hasPossibleLoanExpenseDuplicate: items.some((item) => item.kind === "expense" && /대출|원리금|상환/.test(item.name)),
     });
-  }, [currentAmountWon, items, loanImpact, monthlyContributionWon, onSnapshotChange, result, totals]);
+  }, [currentAmountWon, items, loanImpact, monthlySurplusWon, onSnapshotChange, result, totals]);
 
   const invalidReturn = result.reason === "invalid-return-rate";
   const failureMessage = invalidReturn
@@ -570,7 +571,7 @@ export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (sna
       <div className="grid grid-cols-4 border-b border-[#dfe5ed]" role="tablist" aria-label="플래너 입력 카테고리">
         {tabs.map(({ icon: TabIcon, ...tab }) => (
           <button
-            aria-controls={`panel-${tab.id}`}
+            aria-controls={`planner-${tab.id}`}
             aria-selected={activeTab === tab.id}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 border-b-2 px-1 text-[11px] font-semibold ${activeTab === tab.id ? "border-[#20a486] bg-[#f2faf7] text-[#087a63]" : "border-transparent text-[#697587] hover:bg-[#f8fafc]"}`}
             id={`tab-${tab.id}`}
@@ -587,18 +588,18 @@ export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (sna
         ))}
       </div>
 
-      <div className="px-5 pb-5" hidden={activeTab !== "net-worth"} id="panel-net-worth" role="tabpanel" aria-labelledby="tab-net-worth">
+      <div className="scroll-mt-24 px-5 pb-5" hidden={activeTab !== "net-worth"} id="planner-net-worth" role="tabpanel" aria-labelledby="tab-net-worth">
         <CategoryGroup adding={addingKind === "asset"} kind="asset" items={items} expandedId={expandedId} onAddPreset={addItem} onDelete={deleteItem} onRequestAdd={(kind) => setAddingKind((current) => current === kind ? null : kind)} onToggle={(id) => setExpandedId((current) => current === id ? null : id)} onUpdate={(id, patch) => setItems((current) => updateCategoryItem(current, id, patch))} />
         <CategoryGroup adding={addingKind === "liability"} kind="liability" items={items} expandedId={expandedId} onAddPreset={addItem} onDelete={deleteItem} onRequestAdd={(kind) => setAddingKind((current) => current === kind ? null : kind)} onToggle={(id) => setExpandedId((current) => current === id ? null : id)} onUpdate={(id, patch) => setItems((current) => updateCategoryItem(current, id, patch))} />
         <p className="mt-1 text-xs font-semibold leading-5 text-[#697587]">대출 원금은 순자산에도 반영하려면 부채 항목으로 함께 등록하세요.</p>
       </div>
 
-      <div className="px-5 pb-5" hidden={activeTab !== "cash-flow"} id="panel-cash-flow" role="tabpanel" aria-labelledby="tab-cash-flow">
+      <div className="scroll-mt-24 px-5 pb-5" hidden={activeTab !== "cash-flow"} id="planner-cash-flow" role="tabpanel" aria-labelledby="tab-cash-flow">
         <CategoryGroup adding={addingKind === "income"} kind="income" items={items} expandedId={expandedId} onAddPreset={addItem} onDelete={deleteItem} onRequestAdd={(kind) => setAddingKind((current) => current === kind ? null : kind)} onToggle={(id) => setExpandedId((current) => current === id ? null : id)} onUpdate={(id, patch) => setItems((current) => updateCategoryItem(current, id, patch))} />
         <CategoryGroup adding={addingKind === "expense"} kind="expense" items={items} expandedId={expandedId} onAddPreset={addItem} onDelete={deleteItem} onRequestAdd={(kind) => setAddingKind((current) => current === kind ? null : kind)} onToggle={(id) => setExpandedId((current) => current === id ? null : id)} onUpdate={(id, patch) => setItems((current) => updateCategoryItem(current, id, patch))} />
       </div>
 
-      <div className="px-5 pb-5" hidden={activeTab !== "loan"} id="panel-loan" role="tabpanel" aria-labelledby="tab-loan">
+      <div className="scroll-mt-24 px-5 pb-5" hidden={activeTab !== "loan"} id="planner-loan" role="tabpanel" aria-labelledby="tab-loan">
           <section className="py-5" aria-labelledby="loan-editor-title">
             <div className="flex items-start justify-between gap-3">
               <div><h3 className="text-base font-bold text-[#18202b]" id="loan-editor-title">대출 상환</h3><p className="mt-1 text-sm font-semibold text-[#697587]">원리금 균등 상환 시나리오</p></div>
@@ -618,7 +619,7 @@ export function GoalQuickPlanner({ onSnapshotChange }: { onSnapshotChange?: (sna
           </section>
       </div>
 
-      <div className="px-5 pb-5" hidden={activeTab !== "return"} id="panel-return" role="tabpanel" aria-labelledby="tab-return">
+      <div className="scroll-mt-24 px-5 pb-5" hidden={activeTab !== "return"} id="planner-return" role="tabpanel" aria-labelledby="tab-return">
           <section className="py-5" aria-labelledby="return-title">
             <h3 className="text-base font-bold text-[#18202b]" id="return-title">수익률 가정</h3>
             <p className="mt-1 text-sm font-semibold text-[#697587]">목표 계산에만 사용하는 시나리오 값입니다.</p>
