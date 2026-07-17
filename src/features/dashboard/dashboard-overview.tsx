@@ -59,6 +59,17 @@ export function formatExpectedMonth(months: number | null, referenceDate = new D
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", timeZone: "UTC" }).format(expected);
 }
 
+export function formatKoreanReferenceDate(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 function Metric({ icon, label, value, warning = false, testId }: { icon: ReactNode; label: string; value: number; warning?: boolean; testId?: string }) {
   return (
     <div className="min-w-0 px-3 py-4 sm:px-5">
@@ -111,7 +122,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     persistInput(scenarioInput);
   };
   const calculationReferenceDate = useMemo(
-    () => (referenceDate ?? new Date()).toISOString().slice(0, 10),
+    () => formatKoreanReferenceDate(referenceDate ?? new Date()),
     [referenceDate],
   );
   const scenario = useMemo(() => calculateFinanceScenario(input, { referenceDate: calculationReferenceDate }), [calculationReferenceDate, input]);

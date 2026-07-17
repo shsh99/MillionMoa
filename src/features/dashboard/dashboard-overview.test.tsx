@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { StrictMode } from "react";
-import { DashboardOverview, formatExpectedMonth, initialFinanceScenario } from "./dashboard-overview";
+import { DashboardOverview, formatExpectedMonth, formatKoreanReferenceDate, initialFinanceScenario } from "./dashboard-overview";
 import { getFinanceScenarioStorageKey } from "./finance-scenario-storage";
 
 const ownerStorageKey = getFinanceScenarioStorageKey("local-demo-profile");
@@ -17,6 +17,10 @@ describe("formatExpectedMonth", () => {
   it("normalizes a month-end reference before adding months", () => {
     expect(formatExpectedMonth(1, new Date(Date.UTC(2026, 0, 31)))).toBe("2026년 2월");
     expect(formatExpectedMonth(null)).toBe("계획 조정 필요");
+  });
+
+  it("uses the Korean calendar date around a UTC month boundary", () => {
+    expect(formatKoreanReferenceDate(new Date("2026-01-31T15:30:00.000Z"))).toBe("2026-02-01");
   });
 });
 
