@@ -3,6 +3,7 @@ import {
   financeScenarioSchema,
   type FinanceScenarioInput,
 } from "./finance-scenario-model";
+import { calculateExpenseSummary } from "./expense-management-model";
 
 export const FINANCE_SCENARIO_STORAGE_KEY = "millionmoa.finance-scenario";
 const MAX_SERIALIZED_PAYLOAD_BYTES = 256 * 1_024;
@@ -43,7 +44,11 @@ export function saveFinanceScenario(
   ownerId: string,
   scenario: FinanceScenarioInput,
 ): void {
-  const envelope = financeScenarioEnvelopeSchema.parse({ version: 2, scenario });
+  const canonicalScenario = {
+    ...scenario,
+    monthlyNonLoanExpense: calculateExpenseSummary(scenario.expenses).monthlyTotal,
+  };
+  const envelope = financeScenarioEnvelopeSchema.parse({ version: 2, scenario: canonicalScenario });
   const serialized = JSON.stringify(envelope);
   if (serializedByteLength(serialized) > MAX_SERIALIZED_PAYLOAD_BYTES) {
     throw new RangeError("finance scenario payload must not exceed 256 KiB");

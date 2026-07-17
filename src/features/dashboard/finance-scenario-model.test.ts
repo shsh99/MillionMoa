@@ -244,9 +244,46 @@ describe("calculateFinanceScenario", () => {
     expect(result.monthlyNonLoanExpense).toBe(340_000);
     expect(result.rawMonthlySurplus).toBe(660_000);
   });
+
+  it("calculates current expenses for the supplied reference month", () => {
+    const result = calculateFinanceScenario({
+      assets: [],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 0,
+      expenses: [
+        { ...monthlyExpense(300_000)[0], id: "expired", startDate: "2026-01-01", endDate: "2026-06-30" },
+        { ...monthlyExpense(200_000)[0], id: "future", startDate: "2026-08-01" },
+      ],
+    }, { referenceDate: "2026-07-17" });
+
+    expect(result.monthlyNonLoanExpense).toBe(0);
+    expect(result.rawMonthlySurplus).toBe(1_000_000);
+  });
 });
 
 describe("createFinanceProjectionSeries", () => {
+  it("recalculates active expenses as projection months cross schedule boundaries", () => {
+    const series = createFinanceProjectionSeries({
+      assets: [],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 0,
+      expenses: [{
+        ...monthlyExpense(400_000)[0],
+        startDate: "2026-08-01",
+        endDate: "2026-09-30",
+      }],
+    }, { maxMonths: 3, intervalMonths: 1, referenceDate: "2026-07-17" });
+
+    expect(series.map(({ month, debtAdjusted }) => ({ month, debtAdjusted }))).toEqual([
+      { month: 0, debtAdjusted: 0 },
+      { month: 1, debtAdjusted: 600_000 },
+      { month: 2, debtAdjusted: 1_200_000 },
+      { month: 3, debtAdjusted: 2_200_000 },
+    ]);
+  });
+
   it("uses the changing multi-loan schedule when calculating the goal month", () => {
     const input = {
       assets: [{ ...assets[0], balance: 0 }],

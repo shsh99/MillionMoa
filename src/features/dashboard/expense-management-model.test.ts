@@ -58,6 +58,17 @@ describe("calculateExpenseSummary", () => {
       byKind: { fixed: 43_338, living: 3_334, irregular: 833 },
     });
   });
+
+  it("includes expenses only while their schedule is active in the reference month", () => {
+    const items = [
+      expense({ id: "future", amount: 200_000, startDate: "2026-09-01" }),
+      expense({ id: "active", amount: 300_000, startDate: "2026-07-31", endDate: "2026-08-01" }),
+      expense({ id: "expired", amount: 400_000, startDate: "2026-01-01", endDate: "2026-06-30" }),
+    ];
+
+    expect(calculateExpenseSummary(items, "2026-08-15").monthlyTotal).toBe(300_000);
+    expect(calculateExpenseSummary(items, "2026-09").monthlyTotal).toBe(200_000);
+  });
 });
 
 describe("expenseCategories", () => {

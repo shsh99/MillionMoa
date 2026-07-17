@@ -57,12 +57,28 @@ export function calculateAnnualExpenseEquivalent(expense: ExpenseItem): number {
   }
 }
 
-export function calculateExpenseSummary(expenses: ExpenseItem[]) {
+function monthKey(value: string) {
+  const match = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(value);
+  if (match === null || Number(match[2]) < 1 || Number(match[2]) > 12) {
+    throw new RangeError("reference date must be an ISO date or month");
+  }
+  return `${match[1]}-${match[2]}`;
+}
+
+function isExpenseActive(expense: ExpenseItem, referenceMonth?: string) {
+  if (referenceMonth === undefined) return true;
+  return monthKey(expense.startDate) <= referenceMonth
+    && (expense.endDate === undefined || monthKey(expense.endDate) >= referenceMonth);
+}
+
+export function calculateExpenseSummary(expenses: ExpenseItem[], referenceDate?: string) {
   const monthlyByKind: Record<ExpenseKind, number> = { fixed: 0, living: 0, irregular: 0 };
   let monthlyTotal = 0;
   let annualTotal = 0;
+  const referenceMonth = referenceDate === undefined ? undefined : monthKey(referenceDate);
 
   for (const expense of expenses) {
+    if (!isExpenseActive(expense, referenceMonth)) continue;
     const monthly = calculateMonthlyExpenseEquivalent(expense);
     monthlyTotal += monthly;
     annualTotal += calculateAnnualExpenseEquivalent(expense);

@@ -235,9 +235,15 @@ function validateScenario(input: FinanceScenarioInput) {
   }
 }
 
-export function calculateFinanceScenario(input: FinanceScenarioInput) {
+export function calculateFinanceScenario(
+  input: FinanceScenarioInput,
+  options: { referenceDate?: string } = {},
+) {
   validateScenario(input);
-  const monthlyNonLoanExpense = calculateExpenseSummary(input.expenses).monthlyTotal;
+  const monthlyNonLoanExpense = calculateExpenseSummary(
+    input.expenses,
+    options.referenceDate,
+  ).monthlyTotal;
   const loanSummaries = input.loans.map(calculateLoanScheduleSummary);
   const totalAssetBalances = input.assets.reduce((total, asset) => total + asset.balance, 0);
   const totalLoanPrincipals = input.loans.reduce((total, loan) => total + loan.principal, 0);
@@ -325,10 +331,9 @@ function totalProjectedAssets(state: ProjectionState) {
 
 export function createFinanceProjectionSeries(
   input: FinanceScenarioInput,
-  options: { maxMonths?: number; intervalMonths?: number } = {},
+  options: { maxMonths?: number; intervalMonths?: number; referenceDate?: string } = {},
 ): FinanceProjectionPoint[] {
-  calculateFinanceScenario(input);
-  const monthlyNonLoanExpense = calculateExpenseSummary(input.expenses).monthlyTotal;
+  calculateFinanceScenario(input, { referenceDate: options.referenceDate });
   const initialBalances = input.assets.map((asset) => asset.balance);
   const baselineState: ProjectionState = { accountBalances: [...initialBalances], cash: 0 };
   const debtAdjustedState: ProjectionState = { accountBalances: [...initialBalances], cash: 0 };
@@ -336,6 +341,11 @@ export function createFinanceProjectionSeries(
 
   const maxMonths = options.maxMonths ?? 120;
   const intervalMonths = options.intervalMonths ?? 12;
+  const referenceDate = options.referenceDate ?? new Date().toISOString().slice(0, 10);
+  const referenceMonth = new Date(`${referenceDate.slice(0, 7)}-01T00:00:00.000Z`);
+  if (Number.isNaN(referenceMonth.valueOf())) {
+    throw new RangeError("reference date must be an ISO date or month");
+  }
   if (!Number.isInteger(maxMonths) || maxMonths < 0 || maxMonths > 1_200) {
     throw new RangeError("projection maxMonths must be between 0 and 1200");
   }
@@ -345,6 +355,15 @@ export function createFinanceProjectionSeries(
 
   for (let month = 0; month <= maxMonths; month += 1) {
     if (month > 0) {
+      const projectedMonth = new Date(Date.UTC(
+        referenceMonth.getUTCFullYear(),
+        referenceMonth.getUTCMonth() + month,
+        1,
+      )).toISOString().slice(0, 7);
+      const monthlyNonLoanExpense = calculateExpenseSummary(
+        input.expenses,
+        projectedMonth,
+      ).monthlyTotal;
       const preLoanCashFlow = input.monthlyIncome - monthlyNonLoanExpense;
       const loanPayment = input.loans.reduce(
         (total, loan) => total + loanPaymentAtMonth(loan, month),

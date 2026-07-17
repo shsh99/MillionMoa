@@ -113,6 +113,19 @@ describe("finance scenario storage", () => {
     expect(fallback).toEqual(before);
   });
 
+  it("canonicalizes the compatibility monthly expense before validating a v2 save", () => {
+    const storage = new MemoryStorage();
+
+    saveFinanceScenario(storage, OWNER_ID, {
+      ...scenario,
+      monthlyNonLoanExpense: -1,
+      expenses: [{ ...scenario.expenses[0], amount: 750_000 }],
+    });
+
+    const saved = JSON.parse(storage.values.get(getFinanceScenarioStorageKey(OWNER_ID))!);
+    expect(saved.scenario.monthlyNonLoanExpense).toBe(750_000);
+  });
+
   it("migrates a version 1 aggregate into exactly one monthly living expense", () => {
     const storage = new MemoryStorage();
     const legacyScenario: Partial<FinanceScenarioInput> = { ...scenario };
@@ -140,6 +153,23 @@ describe("finance scenario storage", () => {
         }],
       },
     });
+  });
+
+  it("synchronizes the compatibility aggregate while migrating version 1", () => {
+    const storage = new MemoryStorage();
+    storage.values.set(
+      getFinanceScenarioStorageKey(OWNER_ID),
+      JSON.stringify({
+        version: 1,
+        scenario: { ...scenario, monthlyNonLoanExpense: 625_000, expenses: undefined },
+      }),
+    );
+
+    const result = loadFinanceScenario(storage, OWNER_ID, scenario);
+
+    expect(result.source).toBe("saved");
+    expect(result.scenario.monthlyNonLoanExpense).toBe(625_000);
+    expect(result.scenario.expenses[0].amount).toBe(625_000);
   });
 
   it.each(["", "   ", "a".repeat(129)])("rejects invalid owner scope %j on save", (ownerId) => {
