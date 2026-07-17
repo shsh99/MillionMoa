@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 export type MoneyInputProps = {
   id: string;
@@ -73,8 +73,8 @@ function digitOffset(value: string, characterOffset: number) {
   return (value.slice(0, characterOffset).match(/\d/g) ?? []).length;
 }
 
-function characterOffset(value: string, digitsBeforeCaret: number) {
-  if (digitsBeforeCaret === 0) return 0;
+function characterOffset(value: string, digitsBeforeCaret: number, afterLeadingMinus: boolean) {
+  if (digitsBeforeCaret === 0) return afterLeadingMinus && value.startsWith("-") ? 1 : 0;
   let digitsSeen = 0;
   for (let index = 0; index < value.length; index += 1) {
     if (/\d/.test(value[index])) digitsSeen += 1;
@@ -93,20 +93,27 @@ export function MoneyInput({
   showPreview = true,
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const selectionRef = useRef<{ startDigits: number; endDigits: number } | null>(null);
+  const selectionRef = useRef<{
+    startDigits: number;
+    endDigits: number;
+    startAfterMinus: boolean;
+    endAfterMinus: boolean;
+  } | null>(null);
+  const [incompleteDraft, setIncompleteDraft] = useState<string | null>(null);
   const normalizedValue = normalizeKrw(value, allowNegative);
   const displayValue = new Intl.NumberFormat("ko-KR").format(normalizedValue / 10_000);
+  const renderedValue = incompleteDraft ?? displayValue;
 
   useLayoutEffect(() => {
     const input = inputRef.current;
     const selection = selectionRef.current;
     if (input && selection && document.activeElement === input) {
       input.setSelectionRange(
-        characterOffset(displayValue, selection.startDigits),
-        characterOffset(displayValue, selection.endDigits),
+        characterOffset(renderedValue, selection.startDigits, selection.startAfterMinus),
+        characterOffset(renderedValue, selection.endDigits, selection.endAfterMinus),
       );
     }
-  }, [displayValue]);
+  }, [renderedValue]);
 
   const rememberSelection = () => {
     const input = inputRef.current;
@@ -114,6 +121,8 @@ export function MoneyInput({
     selectionRef.current = {
       startDigits: digitOffset(input.value, input.selectionStart),
       endDigits: digitOffset(input.value, input.selectionEnd),
+      startAfterMinus: input.value.startsWith("-") && input.selectionStart > 0,
+      endAfterMinus: input.value.startsWith("-") && input.selectionEnd > 0,
     };
   };
 
@@ -130,10 +139,15 @@ export function MoneyInput({
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-right text-base font-bold tabular-nums text-[var(--wallet-ink)] outline-none"
-          value={displayValue}
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-right text-base font-bold tabular-nums text-[var(--wallet-ink)] outline-none"
+          value={renderedValue}
           onChange={(event) => {
             rememberSelection();
+            if (event.target.value === "" || (allowNegative && event.target.value === "-")) {
+              setIncompleteDraft(event.target.value);
+              return;
+            }
+            setIncompleteDraft(null);
             onChange(parseManwon(event.target.value, allowNegative));
           }}
           onSelect={rememberSelection}
@@ -143,7 +157,10 @@ export function MoneyInput({
           type="button"
           aria-label={`${label} 금액 지우기`}
           className="ml-2 flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-2xl text-[var(--wallet-muted)] hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-          onClick={() => onChange(0)}
+          onClick={() => {
+            setIncompleteDraft(null);
+            onChange(0);
+          }}
         >
           <X className="size-4" aria-hidden="true" />
         </button>
@@ -160,7 +177,10 @@ export function MoneyInput({
             type="button"
             aria-label={`${label}에 ${amount}만원 더하기`}
             className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-            onClick={() => onChange(normalizeKrw(normalizedValue + amount * 10_000, allowNegative))}
+            onClick={() => {
+              setIncompleteDraft(null);
+              onChange(normalizeKrw(normalizedValue + amount * 10_000, allowNegative));
+            }}
           >
             +{new Intl.NumberFormat("ko-KR").format(amount)}만
           </button>

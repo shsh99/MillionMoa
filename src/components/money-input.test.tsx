@@ -106,6 +106,41 @@ describe("MoneyInput", () => {
     expect(negativeChange).toHaveBeenLastCalledWith(-500_000);
   });
 
+  it("keeps a standalone minus draft while sequentially typing a negative amount", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} allowNegative onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    await user.clear(input);
+    const callsAfterClear = onChange.mock.calls.length;
+    await user.type(input, "-");
+
+    expect(input).toHaveValue("-");
+    expect(onChange).toHaveBeenCalledTimes(callsAfterClear);
+
+    await user.type(input, "50");
+    expect(input).toHaveValue("-50");
+    expect(onChange).toHaveBeenLastCalledWith(-500_000);
+  });
+
+  it("synchronizes its display when an external value replaces a complete draft", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <MoneyInput id="monthly-pay" label="월급" value={3_200_000} onChange={onChange} />,
+    );
+
+    rerender(<MoneyInput id="monthly-pay" label="월급" value={7_500_000} onChange={onChange} />);
+
+    expect(screen.getByRole("textbox", { name: "월급" })).toHaveValue("750");
+  });
+
+  it("gives the textbox a minimum 44px hit area", () => {
+    render(<MoneyInput id="monthly-pay" label="월급" value={0} onChange={vi.fn()} />);
+
+    expect(screen.getByRole("textbox", { name: "월급" })).toHaveClass("min-h-11");
+  });
+
   it("preserves input focus and selection across controlled updates", () => {
     const onChange = vi.fn();
     const { rerender } = render(
