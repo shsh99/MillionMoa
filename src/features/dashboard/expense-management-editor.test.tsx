@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -102,6 +102,83 @@ describe("ExpenseManagementEditor", () => {
     expect(onChange.mock.calls[0][0][0]).toMatchObject({ id: "rent", startDate: "2026-02-03" });
   });
 
+  it("keeps payment day drafts within 1 through 31 before emitting", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => item.paymentDay === undefined || (item.paymentDay >= 1 && item.paymentDay <= 31))).toBe(true);
+    });
+    render(<ControlledEditor onChange={onChange} />);
+
+    const paymentDay = screen.getByRole("spinbutton", { name: "결제일" });
+    await user.clear(paymentDay);
+    await user.type(paymentDay, "32");
+    await user.tab();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(paymentDay).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("결제일은 1일부터 31일 사이여야 합니다.")).toBeInTheDocument();
+
+    await user.clear(paymentDay);
+    await user.type(paymentDay, "31");
+    await user.tab();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0][0]).toMatchObject({ paymentDay: 31 });
+  });
+
+  it("rejects either date draft when the resulting range would be reversed", () => {
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => !item.endDate || item.startDate <= item.endDate)).toBe(true);
+    });
+    render(<ControlledEditor initialValue={[{ ...expenses[0], endDate: "2026-12-31" }]} onChange={onChange} />);
+
+    const startDate = screen.getByLabelText("시작일");
+    fireEvent.change(startDate, { target: { value: "2027-01-01" } });
+    fireEvent.blur(startDate);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(startDate).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("시작일은 종료일보다 늦을 수 없습니다.")).toBeInTheDocument();
+
+    const endDate = screen.getByLabelText("종료일");
+    fireEvent.change(endDate, { target: { value: "2025-12-31" } });
+    fireEvent.blur(endDate);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(endDate).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("종료일은 시작일보다 빠를 수 없습니다.")).toBeInTheDocument();
+  });
+
+  it("rejects names longer than 80 characters even when inserted directly", () => {
+    const onChange = vi.fn();
+    render(<ControlledEditor onChange={onChange} />);
+
+    const name = screen.getByRole("textbox", { name: "지출 이름" });
+    expect(name).toHaveAttribute("maxlength", "80");
+    fireEvent.change(name, { target: { value: "가".repeat(81) } });
+    fireEvent.blur(name);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("지출 이름은 80자 이하여야 합니다.")).toBeInTheDocument();
+  });
+
+  it("keeps notes over 500 characters local and commits a valid replacement", () => {
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => !item.note || item.note.length <= 500)).toBe(true);
+    });
+    render(<ControlledEditor onChange={onChange} />);
+
+    const note = screen.getByRole("textbox", { name: "메모" });
+    expect(note).toHaveAttribute("maxlength", "500");
+    fireEvent.change(note, { target: { value: "가".repeat(501) } });
+    fireEvent.blur(note);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(note).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("메모는 500자 이하여야 합니다.")).toBeInTheDocument();
+
+    fireEvent.change(note, { target: { value: "교통비 메모" } });
+    fireEvent.blur(note);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0][0]).toMatchObject({ note: "교통비 메모" });
+  });
+
   it("shows schedule fields appropriate to the selected frequency", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);
@@ -136,6 +213,20 @@ describe("ExpenseManagementEditor", () => {
     expect(undo).toHaveFocus();
     await user.click(undo);
     expect(screen.getByRole("textbox", { name: "지출 이름" })).toHaveValue("월세 복사본");
+  });
+
+  it("keeps generated duplicate names within the canonical limit", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => item.name.length <= 80)).toBe(true);
+    });
+    render(<ControlledEditor initialValue={[{ ...expenses[0], name: "가".repeat(80) }]} onChange={onChange} />);
+
+    await user.click(screen.getByRole("button", { name: "선택한 지출 복제" }));
+
+    const duplicate = onChange.mock.calls[0][0][1];
+    expect(duplicate.name).toHaveLength(80);
+    expect(duplicate.name.endsWith(" 복사본")).toBe(true);
   });
 
   it("renders a useful empty state", () => {

@@ -65,8 +65,14 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
   const selected = value.find((item) => item.id === selectedId && item.kind === kind) ?? visibleItems[0];
   const [nameDraft, setNameDraft] = useState(selected?.name ?? "");
   const [startDateDraft, setStartDateDraft] = useState(selected?.startDate ?? "");
-  const [nameInvalid, setNameInvalid] = useState(false);
-  const [startDateInvalid, setStartDateInvalid] = useState(false);
+  const [endDateDraft, setEndDateDraft] = useState(selected?.endDate ?? "");
+  const [paymentDayDraft, setPaymentDayDraft] = useState(selected?.paymentDay?.toString() ?? "");
+  const [noteDraft, setNoteDraft] = useState(selected?.note ?? "");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [startDateError, setStartDateError] = useState<string | null>(null);
+  const [endDateError, setEndDateError] = useState<string | null>(null);
+  const [paymentDayError, setPaymentDayError] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
   const visibleCategories = expenseCategories.filter((category) => category.kind === kind);
   const groupedItems = useMemo(() => visibleCategories.map((category) => ({
     ...category,
@@ -83,9 +89,15 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
   useEffect(() => {
     setNameDraft(selected?.name ?? "");
     setStartDateDraft(selected?.startDate ?? "");
-    setNameInvalid(false);
-    setStartDateInvalid(false);
-  }, [selected?.id, selected?.name, selected?.startDate]);
+    setEndDateDraft(selected?.endDate ?? "");
+    setPaymentDayDraft(selected?.paymentDay?.toString() ?? "");
+    setNoteDraft(selected?.note ?? "");
+    setNameError(null);
+    setStartDateError(null);
+    setEndDateError(null);
+    setPaymentDayError(null);
+    setNoteError(null);
+  }, [selected?.id, selected?.name, selected?.startDate, selected?.endDate, selected?.paymentDay, selected?.note]);
 
   const selectKind = (nextKind: ExpenseKind) => {
     setKind(nextKind);
@@ -99,14 +111,38 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
 
   const commitName = () => {
     const name = nameDraft.trim();
-    setNameInvalid(!name);
-    if (name && name !== selected?.name) updateSelected({ name });
+    const error = !name ? "지출 이름을 입력해 주세요." : name.length > 80 ? "지출 이름은 80자 이하여야 합니다." : null;
+    setNameError(error);
+    if (!error && name !== selected?.name) updateSelected({ name });
   };
 
   const commitStartDate = () => {
-    const valid = /^\d{4}-\d{2}-\d{2}$/.test(startDateDraft);
-    setStartDateInvalid(!valid);
-    if (valid && startDateDraft !== selected?.startDate) updateSelected({ startDate: startDateDraft });
+    const error = !/^\d{4}-\d{2}-\d{2}$/.test(startDateDraft)
+      ? "시작일을 입력해 주세요."
+      : selected?.endDate && startDateDraft > selected.endDate ? "시작일은 종료일보다 늦을 수 없습니다." : null;
+    setStartDateError(error);
+    if (!error && startDateDraft !== selected?.startDate) updateSelected({ startDate: startDateDraft });
+  };
+
+  const commitEndDate = () => {
+    const error = endDateDraft && (!/^\d{4}-\d{2}-\d{2}$/.test(endDateDraft) || endDateDraft < (selected?.startDate ?? ""))
+      ? "종료일은 시작일보다 빠를 수 없습니다." : null;
+    setEndDateError(error);
+    if (!error && endDateDraft !== (selected?.endDate ?? "")) updateSelected({ endDate: endDateDraft || undefined });
+  };
+
+  const commitPaymentDay = () => {
+    const paymentDay = Number(paymentDayDraft);
+    const error = paymentDayDraft && (!Number.isInteger(paymentDay) || paymentDay < 1 || paymentDay > 31)
+      ? "결제일은 1일부터 31일 사이여야 합니다." : null;
+    setPaymentDayError(error);
+    if (!error && paymentDay !== selected?.paymentDay) updateSelected({ paymentDay: paymentDayDraft ? paymentDay : undefined });
+  };
+
+  const commitNote = () => {
+    const error = noteDraft.length > 500 ? "메모는 500자 이하여야 합니다." : null;
+    setNoteError(error);
+    if (!error && noteDraft !== (selected?.note ?? "")) updateSelected({ note: noteDraft || undefined });
   };
 
   const addItem = () => {
@@ -127,7 +163,8 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
 
   const duplicateSelected = () => {
     if (!selected) return;
-    const copy = { ...selected, id: newId(), name: `${selected.name} 복사본` };
+    const suffix = " 복사본";
+    const copy = { ...selected, id: newId(), name: `${selected.name.slice(0, 80 - suffix.length)}${suffix}` };
     focusNameRef.current = true;
     setSelectedId(copy.id);
     onChange([...value, copy]);
@@ -220,18 +257,18 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
           {selected && (
             <div className="space-y-5" data-testid="expense-editor-panel">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field htmlFor={`expense-name-${selected.id}`} label="지출 이름"><input aria-invalid={nameInvalid} aria-describedby={nameInvalid ? `expense-name-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-name-${selected.id}`} name="expenseName" onBlur={commitName} onChange={(event) => { setNameDraft(event.target.value); setNameInvalid(false); }} ref={nameInputRef} required value={nameDraft} />{nameInvalid && <p className="text-sm font-semibold text-rose-700" id={`expense-name-error-${selected.id}`}>지출 이름을 입력해 주세요.</p>}</Field>
+                <Field htmlFor={`expense-name-${selected.id}`} label="지출 이름"><input aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `expense-name-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-name-${selected.id}`} maxLength={80} name="expenseName" onBlur={commitName} onChange={(event) => { setNameDraft(event.target.value); setNameError(null); }} ref={nameInputRef} required value={nameDraft} />{nameError && <p className="text-sm font-semibold text-rose-700" id={`expense-name-error-${selected.id}`}>{nameError}</p>}</Field>
                 <Field htmlFor={`expense-category-${selected.id}`} label="카테고리"><select autoComplete="off" className={inputClass} id={`expense-category-${selected.id}`} name="expenseCategory" value={selected.categoryId} onChange={(event) => updateSelected({ categoryId: event.target.value })}>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
               </div>
               <MoneyInput id={`expense-amount-${selected.id}`} label="금액" onChange={(amount) => updateSelected({ amount })} quickAmountsManwon={[1, 5, 10, 50]} value={selected.amount} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field htmlFor={`expense-frequency-${selected.id}`} label="반복 주기"><select autoComplete="off" className={inputClass} id={`expense-frequency-${selected.id}`} name="expenseFrequency" value={selected.frequency} onChange={(event) => updateSelected({ frequency: event.target.value as ExpenseFrequency })}>{frequencies.map((frequency) => <option key={frequency.id} value={frequency.id}>{frequency.label}</option>)}</select></Field>
-                {selected.frequency === "monthly" ? <Field htmlFor={`expense-payment-day-${selected.id}`} label="결제일"><input aria-label="결제일" autoComplete="off" className={inputClass} id={`expense-payment-day-${selected.id}`} max={31} min={1} name="expensePaymentDay" type="number" value={selected.paymentDay ?? ""} onChange={(event) => updateSelected({ paymentDay: event.target.value ? Number(event.target.value) : undefined })} /></Field> : <Field htmlFor={`expense-next-date-${selected.id}`} label={selected.frequency === "one-time" ? "지출 예정일" : "다음 결제일"}><input autoComplete="off" className={inputClass} id={`expense-next-date-${selected.id}`} name="expenseNextPaymentDate" type="date" value={selected.nextPaymentDate ?? ""} onChange={(event) => updateSelected({ nextPaymentDate: event.target.value || undefined })} /></Field>}
-                <Field htmlFor={`expense-start-${selected.id}`} label="시작일"><input aria-invalid={startDateInvalid} aria-describedby={startDateInvalid ? `expense-start-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-start-${selected.id}`} name="expenseStartDate" onBlur={commitStartDate} onChange={(event) => { setStartDateDraft(event.target.value); setStartDateInvalid(false); }} required type="date" value={startDateDraft} />{startDateInvalid && <p className="text-sm font-semibold text-rose-700" id={`expense-start-error-${selected.id}`}>시작일을 입력해 주세요.</p>}</Field>
-                <Field htmlFor={`expense-end-${selected.id}`} label="종료일"><input autoComplete="off" className={inputClass} id={`expense-end-${selected.id}`} name="expenseEndDate" type="date" value={selected.endDate ?? ""} onChange={(event) => updateSelected({ endDate: event.target.value || undefined })} /></Field>
+                {selected.frequency === "monthly" ? <Field htmlFor={`expense-payment-day-${selected.id}`} label="결제일"><input aria-invalid={Boolean(paymentDayError)} aria-describedby={paymentDayError ? `expense-payment-day-error-${selected.id}` : undefined} aria-label="결제일" autoComplete="off" className={inputClass} id={`expense-payment-day-${selected.id}`} max={31} min={1} name="expensePaymentDay" onBlur={commitPaymentDay} onChange={(event) => { setPaymentDayDraft(event.target.value); setPaymentDayError(null); }} type="number" value={paymentDayDraft} />{paymentDayError && <p className="text-sm font-semibold text-rose-700" id={`expense-payment-day-error-${selected.id}`}>{paymentDayError}</p>}</Field> : <Field htmlFor={`expense-next-date-${selected.id}`} label={selected.frequency === "one-time" ? "지출 예정일" : "다음 결제일"}><input autoComplete="off" className={inputClass} id={`expense-next-date-${selected.id}`} name="expenseNextPaymentDate" type="date" value={selected.nextPaymentDate ?? ""} onChange={(event) => updateSelected({ nextPaymentDate: event.target.value || undefined })} /></Field>}
+                <Field htmlFor={`expense-start-${selected.id}`} label="시작일"><input aria-invalid={Boolean(startDateError)} aria-describedby={startDateError ? `expense-start-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-start-${selected.id}`} name="expenseStartDate" onBlur={commitStartDate} onChange={(event) => { setStartDateDraft(event.target.value); setStartDateError(null); }} required type="date" value={startDateDraft} />{startDateError && <p className="text-sm font-semibold text-rose-700" id={`expense-start-error-${selected.id}`}>{startDateError}</p>}</Field>
+                <Field htmlFor={`expense-end-${selected.id}`} label="종료일"><input aria-invalid={Boolean(endDateError)} aria-describedby={endDateError ? `expense-end-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-end-${selected.id}`} name="expenseEndDate" onBlur={commitEndDate} onChange={(event) => { setEndDateDraft(event.target.value); setEndDateError(null); }} type="date" value={endDateDraft} />{endDateError && <p className="text-sm font-semibold text-rose-700" id={`expense-end-error-${selected.id}`}>{endDateError}</p>}</Field>
               </div>
               {selected.frequency !== "one-time" && <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-[var(--wallet-ink)]"><input autoComplete="off" checked={selected.autoRenewal} className="size-5 accent-[var(--wallet-primary)]" name="expenseAutoRenewal" onChange={(event) => updateSelected({ autoRenewal: event.target.checked })} type="checkbox" />자동 갱신</label>}
-              <Field htmlFor={`expense-note-${selected.id}`} label="메모"><textarea autoComplete="off" className={`${inputClass} min-h-24 py-3`} id={`expense-note-${selected.id}`} name="expenseNote" value={selected.note ?? ""} onChange={(event) => updateSelected({ note: event.target.value || undefined })} /></Field>
+              <Field htmlFor={`expense-note-${selected.id}`} label="메모"><textarea aria-invalid={Boolean(noteError)} aria-describedby={noteError ? `expense-note-error-${selected.id}` : undefined} autoComplete="off" className={`${inputClass} min-h-24 py-3`} id={`expense-note-${selected.id}`} maxLength={500} name="expenseNote" onBlur={commitNote} onChange={(event) => { setNoteDraft(event.target.value); setNoteError(null); }} value={noteDraft} />{noteError && <p className="text-sm font-semibold text-rose-700" id={`expense-note-error-${selected.id}`}>{noteError}</p>}</Field>
               <div className="flex flex-col gap-2 border-t border-[var(--wallet-line)] pt-4 sm:flex-row">
                 <button aria-label="선택한 지출 복제" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-bold text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]" onClick={duplicateSelected} type="button"><Copy aria-hidden="true" className="size-4" />복제</button>
                 <button aria-label="선택한 지출 삭제" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-bold text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600" onClick={deleteSelected} type="button"><Trash2 aria-hidden="true" className="size-4" />삭제</button>
