@@ -3,6 +3,8 @@ import {
   allocateCashBuckets,
   calculateAllocationReturn,
   calculateMonthlyCashFlow,
+  calculateSalaryNetPay,
+  calculateSmeIncomeTaxReduction,
   calculateContributionSourceLedger,
   calculateMonthsToGoal,
   calculateScenarioProjection,
@@ -153,6 +155,29 @@ describe("calculator export surface", () => {
         annualReturnRate: 0,
       }).status,
     ).toBe("shortened");
+
+    expect(
+      calculateSalaryNetPay({
+        paymentDate: "2026-07-25",
+        grossMonthlyPay: 3_000_000,
+        nonTaxableMonthlyPay: 200_000,
+        incomeTaxBeforeReduction: { amount: 74_000, provenance: "official-table" },
+      }).status,
+    ).toBe("estimated");
+
+    expect(
+      calculateSmeIncomeTaxReduction({
+        paymentDate: "2026-07-25",
+        initialEligibleEmploymentDate: "2026-01-01",
+        eligibilityType: "youth",
+        birthDate: "2000-01-01",
+        companyEligibility: "confirmed",
+        industryEligibility: "confirmed",
+        workerEligibility: "confirmed",
+        incomeTaxBeforeReduction: 74_000,
+        annualReductionAlreadyUsed: 0,
+      }).status,
+    ).toBe("eligible-estimate");
   });
 
   it("exports cash allocation calculators from the cash-allocation subpath", () => {

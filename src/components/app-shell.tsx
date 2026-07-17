@@ -7,7 +7,7 @@ import { type ReactNode, useEffect, useState } from "react";
 const navItems = [
   { label: "대시보드", href: "/" },
   { label: "월급 배분", href: "#planner-cash-flow" },
-  { label: "계산기", href: "#goal-quick-planner-title" },
+  { label: "계산기", href: "#finance-calculators" },
 ];
 
 const bottomNavItems = [
