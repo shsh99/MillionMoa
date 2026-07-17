@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
+import { StrictMode } from "react";
 import { DashboardOverview, formatExpectedMonth, initialFinanceScenario } from "./dashboard-overview";
 import { getFinanceScenarioStorageKey } from "./finance-scenario-storage";
 
@@ -54,6 +55,41 @@ describe("DashboardOverview", () => {
 
     expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원");
     expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("814,465원");
+  });
+
+  it("restores an edited expense item after remounting", async () => {
+    const user = userEvent.setup();
+    const view = render(<DashboardOverview />);
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null")?.version).toBe(2));
+
+    view.unmount();
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원"));
+  });
+
+  it("persists the first user edit under Strict Mode", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: { ...initialFinanceScenario, monthlyIncome: 3_300_000 },
+    }));
+    render(<StrictMode><DashboardOverview /></StrictMode>);
+    await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: "식비 선택" }));
+    await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
+
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem(ownerStorageKey) ?? "null");
+      expect(saved.scenario.expenses.find((item: { id: string }) => item.id === "food").amount).toBe(800_000);
+    });
   });
 
   it("provides visible destinations for wallet navigation", () => {

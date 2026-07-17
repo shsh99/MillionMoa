@@ -72,7 +72,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [input, setInput] = useState(initialFinanceScenario);
   const [hydrated, setHydrated] = useState(false);
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
-  const skipHydrationSave = useRef(true);
+  const inputRef = useRef(initialFinanceScenario);
 
   useEffect(() => {
     let hadStoredValue = false;
@@ -83,6 +83,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
       accessFailed = true;
     }
     const loaded = loadFinanceScenario(window.localStorage, localFinanceScenarioOwner, initialFinanceScenario);
+    inputRef.current = loaded.scenario;
     setInput(loaded.scenario);
     if (accessFailed || (hadStoredValue && loaded.source === "fallback")) {
       setStorageNotice("저장된 계획을 불러오지 못해 기본값을 사용합니다.");
@@ -90,19 +91,25 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     setHydrated(true);
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (skipHydrationSave.current) {
-      skipHydrationSave.current = false;
-      return;
-    }
+  const persistInput = (scenarioInput: FinanceScenarioInput) => {
     try {
-      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, input);
+      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, scenarioInput);
       setStorageNotice(null);
     } catch {
       setStorageNotice("변경 내용은 유지되지만 이 기기에 저장하지 못했습니다.");
     }
-  }, [hydrated, input]);
+  };
+  const updateInput = (updater: (current: FinanceScenarioInput) => FinanceScenarioInput) => {
+    const next = updater(inputRef.current);
+    inputRef.current = next;
+    setInput(next);
+    persistInput(next);
+  };
+  const replaceInput = (scenarioInput: FinanceScenarioInput) => {
+    inputRef.current = scenarioInput;
+    setInput(scenarioInput);
+    persistInput(scenarioInput);
+  };
   const scenario = useMemo(() => calculateFinanceScenario(input), [input]);
   const projection = useMemo(() => createFinanceProjectionSeries(input), [input]);
   const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount), [input]);
@@ -138,7 +145,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
           {hydrated ? (
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
-              <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} />
+              <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} />
               <div className="flex min-h-28 flex-col justify-center border-t border-[var(--wallet-line)] py-4 sm:border-l sm:border-t-0 sm:pl-5">
                 <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
                 <p className="mt-2 text-2xl font-black tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
@@ -151,12 +158,12 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
         </section>
 
         <div className="scroll-mt-20" id="expense-management">
-          {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => setInput((current) => ({ ...current, expenses }))} /> : null}
+          {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => updateInput((current) => ({ ...current, expenses }))} /> : null}
         </div>
 
         <div className="scroll-mt-20" id="finance-accounts">
           {hydrated ? (
-            <FinanceScenarioEditor value={input} onChange={setInput} />
+            <FinanceScenarioEditor value={input} onChange={replaceInput} />
           ) : (
             <section aria-busy="true" aria-label="금융 계정 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
           )}
