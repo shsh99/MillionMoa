@@ -173,7 +173,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
               </button>
             </div>
             {selectedAsset ? (
-              <div className="space-y-4 rounded-2xl bg-[var(--wallet-surface-tint)] p-4">
+              <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="asset-editor-panel">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="계좌 이름"><input aria-label="자산 계좌 이름" className={inputClass} value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
                   <Field label="계좌 종류"><select aria-label="자산 계좌 종류" className={inputClass} value={selectedAsset.category} onChange={(e) => updateAsset({ category: e.target.value as AssetAccountCategory })}>{assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
@@ -194,7 +194,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
               <button type="button" aria-label="대출 추가" className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-[var(--wallet-coral)] px-3 text-sm font-bold text-white" onClick={addLoan}><Plus className="size-4" aria-hidden="true" /> 추가</button>
             </div>
             {selectedLoan ? (
-              <div className="space-y-4 rounded-2xl bg-[var(--wallet-surface-tint)] p-4">
+              <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="loan-editor-panel">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="대출 이름"><input aria-label="대출 이름" className={inputClass} value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
                   <Field label="대출 종류"><select aria-label="대출 종류" className={inputClass} value={selectedLoan.category} onChange={(e) => updateLoan({ category: e.target.value as LoanCategory })}>{loanCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>

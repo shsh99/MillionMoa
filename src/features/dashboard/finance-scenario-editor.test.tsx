@@ -26,6 +26,20 @@ function ControlledEditor({ onChange = vi.fn() }: { onChange?: (value: FinanceSc
 }
 
 describe("FinanceScenarioEditor", () => {
+  it("keeps asset and loan editors unframed inside the outer container", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    expect(screen.getByTestId("asset-editor-panel")).toHaveClass("border-t");
+    expect(screen.getByTestId("asset-editor-panel")).not.toHaveClass("rounded-2xl");
+
+    await user.click(screen.getByRole("tab", { name: "대출" }));
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    expect(screen.getByTestId("loan-editor-panel")).toHaveClass("border-t");
+    expect(screen.getByTestId("loan-editor-panel")).not.toHaveClass("rounded-2xl");
+  });
+
   it("adds multiple asset accounts and keeps them independently editable", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);

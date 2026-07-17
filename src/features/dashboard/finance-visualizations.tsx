@@ -63,6 +63,7 @@ function Panel({
   children,
   ariaLabel,
   className = "",
+  tone,
 }: {
   icon: ReactNode;
   title: string;
@@ -70,14 +71,22 @@ function Panel({
   children: ReactNode;
   ariaLabel?: string;
   className?: string;
+  tone: "lilac" | "mint" | "coral" | "blue";
 }) {
+  const iconToneClass = {
+    lilac: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    mint: "bg-[var(--wallet-mint-soft)] text-[#247a65]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[#9a4f58]",
+    blue: "bg-[#e8f3fc] text-[#3f739d]",
+  }[tone];
+
   return (
     <section
       aria-label={ariaLabel}
       className={`min-w-0 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5 ${className}`}
     >
       <header className="mb-4 flex items-start gap-3">
-        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--wallet-mint-soft)] text-[#247a65]">
+        <span aria-hidden="true" data-testid={`visualization-icon-${tone}`} className={`grid size-10 shrink-0 place-items-center rounded-2xl ${iconToneClass}`}>
           {icon}
         </span>
         <div className="min-w-0">
@@ -134,6 +143,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         title="순자산 전망"
         description="현재 조건이 유지되는 경우의 시나리오"
         className="lg:col-span-2"
+        tone="lilac"
       >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className={`text-sm font-bold tabular-nums ${scenario.netWorth < 0 ? "text-[#b45309]" : "text-[#087a63]"}`}>
@@ -157,7 +167,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         </div>
       </Panel>
 
-      <Panel icon={<PieChart size={19} strokeWidth={1.8} />} title="자산 구성" description="계좌별 잔액과 비중" ariaLabel="자산 구성">
+      <Panel icon={<PieChart size={19} strokeWidth={1.8} />} title="자산 구성" description="계좌별 잔액과 비중" ariaLabel="자산 구성" tone="mint">
         {composition.length > 0 ? (
           <div className="grid items-center gap-2 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div role="img" aria-label="계좌별 자산 구성 도넛 차트" className="h-48 min-h-48 w-full">
@@ -187,7 +197,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         )}
       </Panel>
 
-      <Panel icon={<WalletCards size={19} strokeWidth={1.8} />} title="이번 달 현금흐름" description="수입은 위로, 지출과 납입은 아래로">
+      <Panel icon={<WalletCards size={19} strokeWidth={1.8} />} title="이번 달 현금흐름" description="수입은 위로, 지출과 납입은 아래로" tone="blue">
         <ul aria-label="월 현금흐름 요약" className="mb-3 grid grid-cols-2 gap-2 text-xs font-semibold text-[#526072]">
           {cashFlow.map((item) => <li key={item.name}>{item.name} <span className="tabular-nums">{formatManwon(item.value, true)}</span></li>)}
         </ul>
@@ -207,7 +217,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         </div>
       </Panel>
 
-      <Panel icon={<Landmark size={19} strokeWidth={1.8} />} title="대출 상환 현황" description="첫 달 예상 납입액 기준" className="lg:col-span-2">
+      <Panel icon={<Landmark size={19} strokeWidth={1.8} />} title="대출 상환 현황" description="첫 달 예상 납입액 기준" className="lg:col-span-2" tone="coral">
         {loans.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-[#e9edf2]">
             <table aria-label="대출별 상환 현황" className="w-full min-w-[620px] border-collapse text-left text-sm">

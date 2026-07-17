@@ -32,7 +32,8 @@ describe("DashboardOverview", () => {
   it("provides visible destinations for wallet navigation", () => {
     render(<DashboardOverview />);
 
-    for (const id of ["finance-calculators", "finance-accounts", "finance-loans"]) {
+    for (const id of ["planner-cash-flow", "finance-calculators", "finance-accounts", "finance-loans"]) {
+      expect(document.querySelectorAll(`#${id}`)).toHaveLength(1);
       expect(document.getElementById(id)).toBeVisible();
     }
   });
@@ -53,11 +54,13 @@ describe("DashboardOverview", () => {
       version: 1,
       scenario: { ...initialFinanceScenario, monthlyIncome: 4_500_000 },
     }));
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
 
     render(<DashboardOverview />);
 
     await waitFor(() => expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("450"));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(setItem).not.toHaveBeenCalled();
   });
 
   it("saves updates as a version 1 envelope under the owner-scoped key", async () => {
@@ -76,6 +79,15 @@ describe("DashboardOverview", () => {
 
   it("recovers from malformed saved data and reports a concise notice", async () => {
     localStorage.setItem(ownerStorageKey, "not-json");
+
+    render(<DashboardOverview />);
+
+    expect(await screen.findByRole("status")).toHaveTextContent("저장된 계획을 불러오지 못해 기본값을 사용합니다.");
+    expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("320");
+  });
+
+  it("recovers when local storage access fails", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("denied", "SecurityError"); });
 
     render(<DashboardOverview />);
 
