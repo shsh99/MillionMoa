@@ -63,17 +63,29 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
 
   const visibleItems = value.filter((item) => item.kind === kind);
   const selected = value.find((item) => item.id === selectedId && item.kind === kind) ?? visibleItems[0];
+  const [nameDraft, setNameDraft] = useState(selected?.name ?? "");
+  const [startDateDraft, setStartDateDraft] = useState(selected?.startDate ?? "");
+  const [nameInvalid, setNameInvalid] = useState(false);
+  const [startDateInvalid, setStartDateInvalid] = useState(false);
   const visibleCategories = expenseCategories.filter((category) => category.kind === kind);
   const groupedItems = useMemo(() => visibleCategories.map((category) => ({
     ...category,
     items: visibleItems.filter((item) => item.categoryId === category.id),
   })).filter((category) => category.items.length > 0), [visibleCategories, visibleItems]);
+  const monthlyTotal = useMemo(() => value.reduce((sum, item) => sum + calculateMonthlyExpenseEquivalent(item), 0), [value]);
 
   useEffect(() => {
     if (!focusNameRef.current) return;
     focusNameRef.current = false;
     nameInputRef.current?.focus();
   }, [selected?.id]);
+
+  useEffect(() => {
+    setNameDraft(selected?.name ?? "");
+    setStartDateDraft(selected?.startDate ?? "");
+    setNameInvalid(false);
+    setStartDateInvalid(false);
+  }, [selected?.id, selected?.name, selected?.startDate]);
 
   const selectKind = (nextKind: ExpenseKind) => {
     setKind(nextKind);
@@ -83,6 +95,18 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
   const updateSelected = (patch: Partial<ExpenseItem>) => {
     if (!selected) return;
     onChange(value.map((item) => item.id === selected.id ? { ...item, ...patch } : item));
+  };
+
+  const commitName = () => {
+    const name = nameDraft.trim();
+    setNameInvalid(!name);
+    if (name && name !== selected?.name) updateSelected({ name });
+  };
+
+  const commitStartDate = () => {
+    const valid = /^\d{4}-\d{2}-\d{2}$/.test(startDateDraft);
+    setStartDateInvalid(!valid);
+    if (valid && startDateDraft !== selected?.startDate) updateSelected({ startDate: startDateDraft });
   };
 
   const addItem = () => {
@@ -134,6 +158,7 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
     <section aria-label="지출 관리" className="overflow-hidden rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] shadow-[var(--wallet-shadow)]">
       <div className="border-b border-[var(--wallet-line)] px-4 py-4 sm:px-5">
         <h2 className="text-lg font-black text-[var(--wallet-ink)]">지출 관리</h2>
+        <p aria-live="polite" className="sr-only" data-testid="expense-total-announcement">월 환산 지출 합계 {formatWon(monthlyTotal)}</p>
       </div>
 
       <div aria-label="지출 종류" className="grid grid-cols-3 bg-[var(--wallet-surface-tint)] p-1.5" role="tablist">
@@ -195,18 +220,18 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
           {selected && (
             <div className="space-y-5" data-testid="expense-editor-panel">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field htmlFor={`expense-name-${selected.id}`} label="지출 이름"><input className={inputClass} id={`expense-name-${selected.id}`} ref={nameInputRef} value={selected.name} onChange={(event) => updateSelected({ name: event.target.value })} /></Field>
-                <Field htmlFor={`expense-category-${selected.id}`} label="카테고리"><select className={inputClass} id={`expense-category-${selected.id}`} value={selected.categoryId} onChange={(event) => updateSelected({ categoryId: event.target.value })}>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
+                <Field htmlFor={`expense-name-${selected.id}`} label="지출 이름"><input aria-invalid={nameInvalid} aria-describedby={nameInvalid ? `expense-name-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-name-${selected.id}`} name="expenseName" onBlur={commitName} onChange={(event) => { setNameDraft(event.target.value); setNameInvalid(false); }} ref={nameInputRef} required value={nameDraft} />{nameInvalid && <p className="text-sm font-semibold text-rose-700" id={`expense-name-error-${selected.id}`}>지출 이름을 입력해 주세요.</p>}</Field>
+                <Field htmlFor={`expense-category-${selected.id}`} label="카테고리"><select autoComplete="off" className={inputClass} id={`expense-category-${selected.id}`} name="expenseCategory" value={selected.categoryId} onChange={(event) => updateSelected({ categoryId: event.target.value })}>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
               </div>
               <MoneyInput id={`expense-amount-${selected.id}`} label="금액" onChange={(amount) => updateSelected({ amount })} quickAmountsManwon={[1, 5, 10, 50]} value={selected.amount} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field htmlFor={`expense-frequency-${selected.id}`} label="반복 주기"><select className={inputClass} id={`expense-frequency-${selected.id}`} value={selected.frequency} onChange={(event) => updateSelected({ frequency: event.target.value as ExpenseFrequency })}>{frequencies.map((frequency) => <option key={frequency.id} value={frequency.id}>{frequency.label}</option>)}</select></Field>
-                {selected.frequency === "monthly" ? <Field htmlFor={`expense-payment-day-${selected.id}`} label="결제일"><input aria-label="결제일" className={inputClass} id={`expense-payment-day-${selected.id}`} max={31} min={1} type="number" value={selected.paymentDay ?? ""} onChange={(event) => updateSelected({ paymentDay: event.target.value ? Number(event.target.value) : undefined })} /></Field> : <Field htmlFor={`expense-next-date-${selected.id}`} label={selected.frequency === "one-time" ? "지출 예정일" : "다음 결제일"}><input className={inputClass} id={`expense-next-date-${selected.id}`} type="date" value={selected.nextPaymentDate ?? ""} onChange={(event) => updateSelected({ nextPaymentDate: event.target.value || undefined })} /></Field>}
-                <Field htmlFor={`expense-start-${selected.id}`} label="시작일"><input className={inputClass} id={`expense-start-${selected.id}`} type="date" value={selected.startDate} onChange={(event) => updateSelected({ startDate: event.target.value })} /></Field>
-                <Field htmlFor={`expense-end-${selected.id}`} label="종료일"><input className={inputClass} id={`expense-end-${selected.id}`} type="date" value={selected.endDate ?? ""} onChange={(event) => updateSelected({ endDate: event.target.value || undefined })} /></Field>
+                <Field htmlFor={`expense-frequency-${selected.id}`} label="반복 주기"><select autoComplete="off" className={inputClass} id={`expense-frequency-${selected.id}`} name="expenseFrequency" value={selected.frequency} onChange={(event) => updateSelected({ frequency: event.target.value as ExpenseFrequency })}>{frequencies.map((frequency) => <option key={frequency.id} value={frequency.id}>{frequency.label}</option>)}</select></Field>
+                {selected.frequency === "monthly" ? <Field htmlFor={`expense-payment-day-${selected.id}`} label="결제일"><input aria-label="결제일" autoComplete="off" className={inputClass} id={`expense-payment-day-${selected.id}`} max={31} min={1} name="expensePaymentDay" type="number" value={selected.paymentDay ?? ""} onChange={(event) => updateSelected({ paymentDay: event.target.value ? Number(event.target.value) : undefined })} /></Field> : <Field htmlFor={`expense-next-date-${selected.id}`} label={selected.frequency === "one-time" ? "지출 예정일" : "다음 결제일"}><input autoComplete="off" className={inputClass} id={`expense-next-date-${selected.id}`} name="expenseNextPaymentDate" type="date" value={selected.nextPaymentDate ?? ""} onChange={(event) => updateSelected({ nextPaymentDate: event.target.value || undefined })} /></Field>}
+                <Field htmlFor={`expense-start-${selected.id}`} label="시작일"><input aria-invalid={startDateInvalid} aria-describedby={startDateInvalid ? `expense-start-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-start-${selected.id}`} name="expenseStartDate" onBlur={commitStartDate} onChange={(event) => { setStartDateDraft(event.target.value); setStartDateInvalid(false); }} required type="date" value={startDateDraft} />{startDateInvalid && <p className="text-sm font-semibold text-rose-700" id={`expense-start-error-${selected.id}`}>시작일을 입력해 주세요.</p>}</Field>
+                <Field htmlFor={`expense-end-${selected.id}`} label="종료일"><input autoComplete="off" className={inputClass} id={`expense-end-${selected.id}`} name="expenseEndDate" type="date" value={selected.endDate ?? ""} onChange={(event) => updateSelected({ endDate: event.target.value || undefined })} /></Field>
               </div>
-              {selected.frequency !== "one-time" && <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-[var(--wallet-ink)]"><input checked={selected.autoRenewal} className="size-5 accent-[var(--wallet-primary)]" onChange={(event) => updateSelected({ autoRenewal: event.target.checked })} type="checkbox" />자동 갱신</label>}
-              <Field htmlFor={`expense-note-${selected.id}`} label="메모"><textarea className={`${inputClass} min-h-24 py-3`} id={`expense-note-${selected.id}`} value={selected.note ?? ""} onChange={(event) => updateSelected({ note: event.target.value || undefined })} /></Field>
+              {selected.frequency !== "one-time" && <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-[var(--wallet-ink)]"><input autoComplete="off" checked={selected.autoRenewal} className="size-5 accent-[var(--wallet-primary)]" name="expenseAutoRenewal" onChange={(event) => updateSelected({ autoRenewal: event.target.checked })} type="checkbox" />자동 갱신</label>}
+              <Field htmlFor={`expense-note-${selected.id}`} label="메모"><textarea autoComplete="off" className={`${inputClass} min-h-24 py-3`} id={`expense-note-${selected.id}`} name="expenseNote" value={selected.note ?? ""} onChange={(event) => updateSelected({ note: event.target.value || undefined })} /></Field>
               <div className="flex flex-col gap-2 border-t border-[var(--wallet-line)] pt-4 sm:flex-row">
                 <button aria-label="선택한 지출 복제" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-bold text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]" onClick={duplicateSelected} type="button"><Copy aria-hidden="true" className="size-4" />복제</button>
                 <button aria-label="선택한 지출 삭제" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-bold text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600" onClick={deleteSelected} type="button"><Trash2 aria-hidden="true" className="size-4" />삭제</button>

@@ -36,6 +36,14 @@ describe("ExpenseManagementEditor", () => {
     expect(screen.getByRole("tab", { name: /비정기/ })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("politely announces the monthly expense total", () => {
+    render(<ControlledEditor />);
+
+    const total = screen.getByTestId("expense-total-announcement");
+    expect(total).toHaveAttribute("aria-live", "polite");
+    expect(total).toHaveTextContent("월 환산 지출 합계 970,000원");
+  });
+
   it("adds and edits an item while emitting a new immutable array", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -52,6 +60,46 @@ describe("ExpenseManagementEditor", () => {
     expect(latest).not.toBe(expenses);
     expect(latest.slice(0, expenses.length)).toEqual(expenses);
     expect(latest.at(-1)).toMatchObject({ name: "관리비", amount: 200_000, kind: "fixed" });
+  });
+
+  it("keeps required name edits local until a valid value is committed", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => item.name.trim().length > 0)).toBe(true);
+    });
+    render(<ControlledEditor onChange={onChange} />);
+
+    const name = screen.getByRole("textbox", { name: "지출 이름" });
+    expect(name).toHaveAttribute("name", "expenseName");
+    expect(name).toHaveAttribute("autocomplete", "off");
+    await user.clear(name);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.type(name, "관리비");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0][0]).toMatchObject({ id: "rent", name: "관리비" });
+  });
+
+  it("does not emit an empty required start date and commits a valid replacement on blur", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn((next: ExpenseItem[]) => {
+      expect(next.every((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.startDate))).toBe(true);
+    });
+    render(<ControlledEditor onChange={onChange} />);
+
+    const startDate = screen.getByLabelText("시작일");
+    expect(startDate).toHaveAttribute("name", "expenseStartDate");
+    expect(startDate).toHaveAttribute("autocomplete", "off");
+    await user.clear(startDate);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.type(startDate, "2026-02-03");
+    expect(onChange).not.toHaveBeenCalled();
+    await user.tab();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0][0]).toMatchObject({ id: "rent", startDate: "2026-02-03" });
   });
 
   it("shows schedule fields appropriate to the selected frequency", async () => {
