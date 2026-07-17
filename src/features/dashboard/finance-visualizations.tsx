@@ -35,7 +35,8 @@ export type FinanceVisualizationsProps = {
   projection: FinanceProjectionPoint[];
 };
 
-const assetColors = ["#10b981", "#6366f1", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
+export const walletChartColors = ["#7560c9", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#947bd8"] as const;
+const assetColors = walletChartColors;
 
 function formatKrw(value: number) {
   const rounded = Math.round(value);
@@ -73,10 +74,10 @@ function Panel({
   return (
     <section
       aria-label={ariaLabel}
-      className={`min-w-0 rounded-2xl border border-[#e6eaf0] bg-white p-4 shadow-[0_8px_28px_rgba(31,41,55,0.06)] sm:p-5 ${className}`}
+      className={`min-w-0 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5 ${className}`}
     >
       <header className="mb-4 flex items-start gap-3">
-        <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#eefaf6] text-[#087a63]">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--wallet-mint-soft)] text-[#247a65]">
           {icon}
         </span>
         <div className="min-w-0">
@@ -149,8 +150,8 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
               <ReferenceLine y={0} stroke="#9aa5b4" strokeWidth={1.25} />
               <Tooltip content={<ChartTooltip />} />
               <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: "#526072" }} />
-              <Line type="monotone" dataKey="baseline" name="대출 제외 자산" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
-              <Line type="monotone" dataKey="debtAdjusted" name="부채 반영 순자산" stroke="#6366f1" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="baseline" name="대출 제외 자산" stroke="#49bfa0" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="debtAdjusted" name="부채 반영 순자산" stroke="#7560c9" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -199,7 +200,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
               <ReferenceLine y={0} stroke="#9aa5b4" strokeWidth={1.25} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="value" name="금액" radius={[6, 6, 6, 6]} maxBarSize={38}>
-                {cashFlow.map((item) => <Cell key={item.name} fill={item.value >= 0 ? "#10b981" : "#6366f1"} />)}
+                {cashFlow.map((item) => <Cell key={item.name} fill={item.value >= 0 ? "#49bfa0" : "#e89aa0"} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

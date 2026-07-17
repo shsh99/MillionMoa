@@ -44,10 +44,11 @@ describe("FinanceScenarioEditor", () => {
     render(<ControlledEditor />);
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
 
-    await user.click(screen.getByRole("button", { name: "잔액에 50만원 더하기" }));
-    await user.click(screen.getByRole("button", { name: "잔액에 100만원 더하기" }));
+    await user.click(screen.getByRole("button", { name: "자산 계좌 잔액에 50만원 더하기" }));
+    await user.click(screen.getByRole("button", { name: "자산 계좌 잔액에 100만원 더하기" }));
 
-    expect(screen.getByLabelText("자산 계좌 잔액")).toHaveValue(150);
+    expect(screen.getByLabelText("자산 계좌 잔액")).toHaveValue("150");
+    expect(screen.getByRole("button", { name: "자산 계좌 잔액에 500만원 더하기" })).toBeInTheDocument();
   });
 
   it("deletes only the selected account", async () => {

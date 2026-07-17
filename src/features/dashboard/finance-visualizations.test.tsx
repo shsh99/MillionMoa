@@ -5,7 +5,7 @@ import {
   createFinanceProjectionSeries,
   type FinanceScenarioInput,
 } from "./finance-scenario-model";
-import { FinanceVisualizations } from "./finance-visualizations";
+import { FinanceVisualizations, walletChartColors } from "./finance-visualizations";
 
 const input: FinanceScenarioInput = {
   assets: [
@@ -48,6 +48,10 @@ function renderVisualizations() {
 }
 
 describe("FinanceVisualizations", () => {
+  it("uses the selected wallet chart palette", () => {
+    expect(walletChartColors).toEqual(["#7560c9", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#947bd8"]);
+  });
+
   it("renders accessible chart summaries including negative net worth and signed cash flow", () => {
     renderVisualizations();
 
