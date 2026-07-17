@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type AssetAccountCategory =
   | "checking"
   | "parking"
@@ -44,6 +46,44 @@ export type FinanceScenarioInput = {
   monthlyIncome: number;
   monthlyNonLoanExpense: number;
 };
+
+const nonNegativeIntegerSchema = z.number().int().nonnegative();
+
+const assetAccountSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.enum([
+    "checking",
+    "parking",
+    "savings",
+    "deposit",
+    "investment",
+    "deposit-bond",
+    "other",
+  ]),
+  balance: nonNegativeIntegerSchema,
+  annualRate: z.number().min(-1).max(1).optional(),
+  monthlyContribution: nonNegativeIntegerSchema.optional(),
+  maturityMonth: nonNegativeIntegerSchema.optional(),
+});
+
+const loanSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.enum(["credit", "jeonse", "mortgage", "student", "card", "other"]),
+  principal: nonNegativeIntegerSchema,
+  annualRate: z.number().min(0).max(1),
+  remainingMonths: z.number().int().min(1).max(1_200),
+  repaymentMethod: z.enum(["equal-payment", "equal-principal", "bullet"]),
+});
+
+export const financeScenarioSchema: z.ZodType<FinanceScenarioInput> = z.object({
+  assets: z.array(assetAccountSchema),
+  loans: z.array(loanSchema),
+  manualLiabilities: nonNegativeIntegerSchema.optional(),
+  monthlyIncome: nonNegativeIntegerSchema,
+  monthlyNonLoanExpense: nonNegativeIntegerSchema,
+});
 
 export type LoanScheduleSummary = {
   loanId: string;
