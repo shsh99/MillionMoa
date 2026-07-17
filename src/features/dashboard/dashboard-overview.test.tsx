@@ -6,84 +6,45 @@ import { DashboardOverview, formatExpectedMonth } from "./dashboard-overview";
 describe("formatExpectedMonth", () => {
   it("normalizes a month-end reference before adding months", () => {
     expect(formatExpectedMonth(1, new Date(Date.UTC(2026, 0, 31)))).toBe("2026년 2월");
-    expect(formatExpectedMonth(1, new Date(Date.UTC(2026, 11, 31)))).toBe("2027년 1월");
+    expect(formatExpectedMonth(null)).toBe("계획 조정 필요");
   });
 });
 
 describe("DashboardOverview", () => {
-  it("uses the supplied reference month for the expected goal month", () => {
-    render(<DashboardOverview referenceDate={new Date(Date.UTC(2025, 0, 31))} />);
+  it("shows one coherent multi-account scenario with visual evidence", () => {
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
 
-    expect(screen.getByTestId("overview-goal-months")).toHaveTextContent("2035년 5월");
+    expect(screen.getByRole("heading", { name: "1억을 향한 자산 지도" })).toBeInTheDocument();
+    expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("7,000,000원");
+    expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
   });
 
-  it("shows a compact wallet summary before the monthly strip and planner", () => {
-    render(<DashboardOverview />);
-
-    expect(screen.getByRole("heading", { name: "1억 플랜 계좌" })).toBeInTheDocument();
-    expect(screen.getAllByText("10,000,000원").length).toBeGreaterThan(0);
-    expect(screen.getByText("샘플 데이터")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "1억 목표 달성률" })).toHaveAttribute(
-      "aria-valuenow",
-      "10",
-    );
-    const summary = screen.getByRole("region", { name: "자산 요약" });
-    const monthlyStrip = screen.getByRole("region", { name: "이번 달 요약" });
-    const planner = screen.getByRole("heading", { name: "1억 플랜 조정" });
-
-    expect(summary.compareDocumentPosition(monthlyStrip)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(monthlyStrip.compareDocumentPosition(planner)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(within(monthlyStrip).getByText("월 수입")).toBeInTheDocument();
-    expect(within(monthlyStrip).getByText("월 지출")).toBeInTheDocument();
-    expect(within(monthlyStrip).getByText("상환 후 여유")).toBeInTheDocument();
-    expect(within(monthlyStrip).getByText("대출 상환")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "1억 플랜 조정" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "한 달 돈 흐름" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "자산 구성" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "대출 영향" })).not.toBeInTheDocument();
-    expect(document.querySelectorAll("main")).toHaveLength(0);
-    expect(screen.getByRole("tab", { name: "순자산" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("button", { name: "예금·현금 수정" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "부채 항목 추가" })).toBeInTheDocument();
-    expect(screen.getByText("월 저축 가능액", { selector: "span" })).toBeInTheDocument();
-    expect(screen.getByText(/실제 결과는 홈택스 자료로 확인해야 합니다/)).toBeInTheDocument();
-  });
-
-  it("updates the account overview when planner categories change", async () => {
+  it("adds quick amounts cumulatively and updates the summary", async () => {
     const user = userEvent.setup();
     render(<DashboardOverview />);
 
-    await user.click(screen.getByRole("button", { name: "예금·현금 수정" }));
-    const assetInput = screen.getByRole("textbox", { name: "예금·현금 금액" });
-    await user.clear(assetInput);
-    await user.type(assetInput, "1500");
+    const quickInputs = screen.getByRole("group", { name: "월 수입 빠른 입력" });
+    await user.click(quickInputs.querySelectorAll("button")[2]);
+    await user.click(quickInputs.querySelectorAll("button")[2]);
 
-    expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("15,000,000원");
-
-    await user.click(screen.getByRole("tab", { name: "월 현금흐름" }));
-    await user.click(screen.getByRole("button", { name: "생활비 수정" }));
-    const expenseInput = screen.getByRole("textbox", { name: "생활비 금액" });
-    await user.clear(expenseInput);
-    await user.type(expenseInput, "100");
-
-    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("290,709원");
+    expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("520");
+    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("2,914,465원");
   });
 
-  it("updates the overview timeline and exposes a loan-driven deficit", async () => {
+  it("supports multiple loans and negative net worth", async () => {
     const user = userEvent.setup();
     render(<DashboardOverview />);
-    const initialTimeline = screen.getByTestId("overview-goal-months").textContent;
 
-    await user.click(screen.getByRole("tab", { name: "대출" }));
-    const principal = screen.getByRole("textbox", { name: "대출 원금" });
+    const accountEditor = screen.getByRole("region", { name: "자산 및 대출 편집" });
+    await user.click(within(accountEditor).getByRole("tab", { name: "대출" }));
+    await user.click(within(accountEditor).getByRole("button", { name: "대출 추가" }));
+    const principal = screen.getByRole("spinbutton", { name: "대출 원금" });
     await user.clear(principal);
-    await user.type(principal, "10000");
+    await user.type(principal, "2000");
 
-    expect(screen.getByTestId("overview-goal-months")).not.toHaveTextContent(initialTimeline ?? "");
-    const postLoanSurplus = screen.getByTestId("overview-monthly-surplus-after-loan");
-    expect(postLoanSurplus).toBeVisible();
-    expect(postLoanSurplus).toHaveTextContent("-");
-    expect(postLoanSurplus).toHaveClass("break-words");
-    expect(postLoanSurplus).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("-13,000,000원");
+    expect(screen.getAllByRole("row")).toHaveLength(3);
   });
 });

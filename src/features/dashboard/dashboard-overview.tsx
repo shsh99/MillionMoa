@@ -1,14 +1,29 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Landmark, WalletCards } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ArrowDownToLine, ArrowUpFromLine, Landmark, Target, WalletCards } from "lucide-react";
+import { FinanceScenarioEditor } from "./finance-scenario-editor";
 import {
-  GoalQuickPlanner,
-  initialPlannerSnapshot,
-  type PlannerSnapshot,
-} from "./goal-quick-planner";
+  calculateFinanceScenario,
+  calculateScenarioMonthsToGoal,
+  createFinanceProjectionSeries,
+  type FinanceScenarioInput,
+} from "./finance-scenario-model";
+import { FinanceVisualizations } from "./finance-visualizations";
 
 const goalAmount = 100_000_000;
+
+export const initialFinanceScenario: FinanceScenarioInput = {
+  assets: [
+    { id: "parking", name: "생활비 파킹통장", category: "parking", balance: 4_000_000, annualRate: 0.025 },
+    { id: "savings", name: "청년 적금", category: "savings", balance: 6_000_000, annualRate: 0.045, monthlyContribution: 700_000 },
+  ],
+  loans: [
+    { id: "student-loan", name: "학자금 대출", category: "student", principal: 3_000_000, annualRate: 0.017, remainingMonths: 36, repaymentMethod: "equal-payment" },
+  ],
+  monthlyIncome: 3_200_000,
+  monthlyNonLoanExpense: 2_200_000,
+};
 
 function formatCurrency(value: number) {
   const sign = value < 0 ? "-" : "";
@@ -16,137 +31,90 @@ function formatCurrency(value: number) {
 }
 
 function formatShortMoney(value: number) {
-  const absolute = Math.abs(value);
   const sign = value < 0 ? "-" : "";
+  const absolute = Math.abs(value);
   if (absolute >= 100_000_000) return `${sign}${(absolute / 100_000_000).toFixed(1).replace(/\.0$/, "")}억원`;
   return `${sign}${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(absolute / 10_000)}만원`;
 }
 
 export function formatExpectedMonth(months: number | null, referenceDate = new Date()) {
-  if (months === null) return "확인 필요";
-  const expected = new Date(Date.UTC(
-    referenceDate.getUTCFullYear(),
-    referenceDate.getUTCMonth() + months,
-    1,
-  ));
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(expected);
+  if (months === null) return "계획 조정 필요";
+  const expected = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth() + months, 1));
+  return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", timeZone: "UTC" }).format(expected);
 }
 
-function MonthlyMetric({
-  icon,
-  label,
-  value,
-  testId,
-  valueTestId,
-  warning = false,
-  announce = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  testId?: string;
-  valueTestId?: string;
-  warning?: boolean;
-  announce?: boolean;
-}) {
+function Metric({ icon, label, value, warning = false, testId }: { icon: ReactNode; label: string; value: number; warning?: boolean; testId?: string }) {
   return (
-    <div className="min-w-0 px-2 py-3 sm:px-4">
-      <dt className="flex items-center gap-1.5 text-xs font-medium text-[#697587]">
-        <span aria-hidden="true" className="text-[#7b8797]">{icon}</span>
-        {label}
-      </dt>
-      <dd
-        className={`mt-2 break-words text-sm font-semibold leading-5 tabular-nums [overflow-wrap:anywhere] sm:text-base ${warning ? "text-[#a15c00]" : "text-[#243041]"}`}
-        data-testid={testId}
-      >
-        <span className="break-words" data-testid={valueTestId} aria-live={announce ? "polite" : undefined}>
-          {formatCurrency(value)}
-        </span>
-      </dd>
+    <div className="min-w-0 px-3 py-4 sm:px-5">
+      <dt className="flex items-center gap-1.5 text-xs font-semibold text-slate-500"><span aria-hidden="true">{icon}</span>{label}</dt>
+      <dd className={`mt-2 break-words text-sm font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-base ${warning ? "text-amber-700" : "text-slate-900"}`} data-testid={testId}>{formatCurrency(value)}</dd>
+    </div>
+  );
+}
+
+function CashFlowInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <label className="text-sm font-bold text-slate-700" htmlFor={`cash-${label}`}>{label}</label>
+      <div className="mt-2 flex h-12 items-center rounded-xl border border-slate-200 bg-white px-3 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-100">
+        <input id={`cash-${label}`} aria-label={label} className="min-w-0 flex-1 bg-transparent text-right text-base font-extrabold tabular-nums outline-none" inputMode="numeric" value={new Intl.NumberFormat("ko-KR").format(value / 10_000)} onChange={(event) => onChange(Math.max(0, Number(event.target.value.replace(/\D/g, "")) || 0) * 10_000)} />
+        <span className="ml-1 text-sm font-semibold text-slate-500">만원</span>
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2" aria-label={`${label} 빠른 입력`} role="group">
+        {[10, 50, 100].map((amount) => <button key={amount} type="button" className="min-h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:border-emerald-300 hover:text-emerald-700" onClick={() => onChange(value + amount * 10_000)}>+{amount}만</button>)}
+      </div>
     </div>
   );
 }
 
 export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
-  const [snapshot, setSnapshot] = useState(initialPlannerSnapshot);
-  const handleSnapshotChange = useCallback((next: PlannerSnapshot) => setSnapshot(next), []);
-  const progressPercent = Math.max(0, Math.min(100, Math.round((snapshot.netWorthWon / goalAmount) * 100)));
-  const remainingAmount = Math.max(0, goalAmount - snapshot.netWorthWon);
-  const goalMonthReference = referenceDate ?? new Date();
+  const [input, setInput] = useState(initialFinanceScenario);
+  const scenario = useMemo(() => calculateFinanceScenario(input), [input]);
+  const projection = useMemo(() => createFinanceProjectionSeries(input), [input]);
+  const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount), [input]);
+  const progressPercent = Math.max(0, Math.min(100, Math.round((scenario.netWorth / goalAmount) * 100)));
+  const remainingAmount = goalAmount - scenario.netWorth;
 
   return (
-    <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-7">
+    <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
       <header className="mb-5 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-[#697587]">김기은님의 머니 플랜</p>
-          <h1 id="dashboard-overview-title" className="mt-1 text-xl font-bold text-[#18202b] sm:text-2xl">1억 플랜 계좌</h1>
-        </div>
-        <span className="shrink-0 rounded-md bg-[#eef2f5] px-2.5 py-1.5 text-xs font-semibold text-[#697587]">샘플 데이터</span>
+        <div className="min-w-0"><p className="text-sm font-semibold text-slate-500">김기은님의 머니 플랜</p><h1 id="dashboard-overview-title" className="mt-1 break-keep text-xl font-black text-slate-950 sm:text-2xl">1억을 향한 자산 지도</h1></div>
+        <span className="shrink-0 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">실시간 시나리오</span>
       </header>
 
-      <div className="grid min-w-0 gap-5">
-        <section aria-label="자산 요약" className="min-w-0 rounded-lg border border-[#e2e7ec] bg-white px-5 py-5 sm:px-6">
-          <p className="text-sm font-medium text-[#697587]">현재 순자산</p>
-          <p
-            className="mt-1 break-words text-[2rem] font-black leading-tight text-[#18202b] tabular-nums [overflow-wrap:anywhere] sm:text-[2.5rem]"
-            data-testid="overview-net-worth"
-          >
-            {formatCurrency(snapshot.netWorthWon)}
-          </p>
-
-          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[#e8edf1]" role="progressbar" aria-label="1억 목표 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
-            <div className="h-full rounded-full bg-[#14856f] transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${progressPercent}%` }} />
+      <div className="grid gap-5">
+        <section aria-label="자산 요약" className="overflow-hidden rounded-2xl bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
+          <div className="p-5 sm:p-7">
+            <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-slate-300">현재 순자산</p><Target aria-hidden="true" className="text-emerald-300" size={22} /></div>
+            <p aria-live="polite" className={`mt-2 break-words text-[2.1rem] font-black leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-amber-300" : "text-white"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-label="1억 목표 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-emerald-400 transition-[width]" style={{ width: `${progressPercent}%` }} /></div>
+            <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold text-slate-300">남은 목표 <strong className="ml-1 text-white">{formatShortMoney(remainingAmount)}</strong></span><span className="font-semibold text-slate-300">예상 <strong className="ml-1 text-emerald-300" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
-            <div className="min-w-0">
-              <span className="block font-medium text-[#697587]">남은 목표</span>
-              <strong className="mt-0.5 block break-words font-semibold text-[#344154] tabular-nums [overflow-wrap:anywhere]">{formatShortMoney(remainingAmount)}</strong>
-            </div>
-            <div className="min-w-0 text-right">
-              <span className="block font-medium text-[#697587]">목표 예상</span>
-              <strong className="mt-0.5 block break-words font-semibold text-[#087a63] tabular-nums [overflow-wrap:anywhere]" data-testid="overview-goal-months">
-                {formatExpectedMonth(snapshot.monthsToGoal, goalMonthReference)}
-              </strong>
-            </div>
-          </div>
-        </section>
-
-        <section aria-label="이번 달 요약" className="min-w-0 border-y border-[#e2e7ec] bg-white py-1">
-          <h2 className="sr-only">이번 달 요약</h2>
-          <dl className="grid min-w-0 grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-[#edf0f3]">
-            <MonthlyMetric icon={<ArrowDownToLine size={17} strokeWidth={1.75} />} label="월 수입" value={snapshot.incomeWon} />
-            <MonthlyMetric icon={<ArrowUpFromLine size={17} strokeWidth={1.75} />} label="월 지출" value={snapshot.expenseWon} />
-            <MonthlyMetric
-              icon={<WalletCards size={17} strokeWidth={1.75} />}
-              label="상환 후 여유"
-              value={snapshot.monthlySurplusAfterLoanWon}
-              testId="overview-monthly-surplus"
-              valueTestId="overview-monthly-surplus-after-loan"
-              warning={snapshot.monthlySurplusAfterLoanWon < 0}
-              announce
-            />
-            <MonthlyMetric icon={<Landmark size={17} strokeWidth={1.75} />} label="대출 상환" value={snapshot.monthlyLoanPaymentWon} />
+          <dl className="grid grid-cols-2 border-t border-slate-200 bg-white sm:grid-cols-4 sm:divide-x sm:divide-slate-200">
+            <Metric icon={<ArrowDownToLine size={16} />} label="월 수입" value={scenario.monthlyIncome} />
+            <Metric icon={<ArrowUpFromLine size={16} />} label="생활 지출" value={scenario.monthlyNonLoanExpense} />
+            <Metric icon={<Landmark size={16} />} label="대출 납입" value={scenario.totalLoanPayment} />
+            <div aria-live="polite"><Metric icon={<WalletCards size={16} />} label="상환 후 여유" value={scenario.rawMonthlySurplus} warning={scenario.rawMonthlySurplus < 0} testId="overview-monthly-surplus" /></div>
           </dl>
         </section>
 
-        {snapshot.hasPossibleLoanExpenseDuplicate ? (
-          <p className="rounded-lg bg-[#fff3e6] p-3 text-sm font-semibold leading-6 text-[#8a5100]">
-            지출 항목에 대출 상환으로 보이는 값이 있습니다. 대출 탭의 월 원리금과 중복 차감될 수 있으니 일반 지출에서는 제거해 주세요.
-          </p>
-        ) : null}
-
-        <div className="min-w-0">
-          <GoalQuickPlanner onSnapshotChange={handleSnapshotChange} />
-        </div>
-
-        <section className="border-t border-[#d8e0ea] py-4" aria-labelledby="readiness-title">
-          <h2 id="readiness-title" className="text-base font-bold text-[#18202b]">계산 범위</h2>
-          <p className="mt-2 text-sm font-medium leading-6 text-[#697587]">현재 화면은 자산, 부채, 월 현금흐름, 대출 조건을 반영합니다. 대출 원금은 부채 카테고리에 등록할 때만 순자산에서 차감됩니다. 세액공제와 환급의 실제 결과는 홈택스 자료로 확인해야 합니다.</p>
+        <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_28px_rgba(31,41,55,0.06)] sm:p-5" id="planner-cash-flow">
+          <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-slate-950">월 현금흐름</h2><p className="mt-1 text-sm text-slate-500">만원 단위로 입력하고 빠른 금액은 누를 때마다 합산돼요</p></div>
+          <div className="grid gap-3 sm:grid-cols-2"><CashFlowInput label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => setInput((current) => ({ ...current, monthlyIncome }))} /><CashFlowInput label="월 생활 지출" value={input.monthlyNonLoanExpense} onChange={(monthlyNonLoanExpense) => setInput((current) => ({ ...current, monthlyNonLoanExpense }))} /></div>
         </section>
+
+        <FinanceScenarioEditor value={input} onChange={setInput} />
+        <FinanceVisualizations assets={input.assets} loans={input.loans} scenario={scenario} projection={projection} />
+
+        <details className="rounded-2xl border border-slate-200 bg-white">
+          <summary className="cursor-pointer list-none px-5 py-4 text-sm font-extrabold text-slate-800">계산 기준과 세금 안내</summary>
+          <div className="grid gap-3 border-t border-slate-100 px-5 py-4 text-sm leading-6 text-slate-600 sm:grid-cols-2">
+            <p><strong className="block text-slate-900">수익률</strong>각 계좌에 입력한 연 수익률을 계좌별로 적용하며, 월 적자가 생기면 보유 자산을 먼저 소진합니다.</p>
+            <p><strong className="block text-slate-900">세금·환급</strong>현재 전망은 세전 단순 추정입니다. 세액공제와 연말정산 환급은 실제 납부세액과 홈택스 자료를 기준으로 별도 확인해야 합니다.</p>
+          </div>
+        </details>
+
+        <section className="rounded-2xl bg-emerald-50 p-4 text-sm font-medium leading-6 text-emerald-950" aria-label="계산 안내">계좌 잔액과 대출 원금은 각각 합산하며, 순자산은 자산보다 부채가 많으면 음수로 표시합니다. 전망에는 대출 원금과 이자, 상환 방식, 월 적자까지 반영됩니다.</section>
       </div>
     </section>
   );
