@@ -16,6 +16,8 @@ export type MoneyInputProps = {
 const digitNames = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
 const smallUnits = ["", "십", "백", "천"];
 const largeUnits = ["", "만", "억", "조", "경"];
+const maxSafeManwon = Math.floor(Number.MAX_SAFE_INTEGER / 10_000);
+const maxSafeKrwMultiple = maxSafeManwon * 10_000;
 
 function formatFourDigits(value: number) {
   let result = "";
@@ -50,7 +52,8 @@ export function formatKoreanMoney(value: number) {
 }
 
 function normalizeKrw(value: number, allowNegative: boolean) {
-  const integer = Math.round(Number.isFinite(value) ? value : 0);
+  const finiteValue = Number.isFinite(value) ? value : 0;
+  const integer = Math.max(-Number.MAX_SAFE_INTEGER, Math.min(Number.MAX_SAFE_INTEGER, Math.round(finiteValue)));
   return allowNegative ? integer : Math.max(0, integer);
 }
 
@@ -59,8 +62,25 @@ function parseManwon(value: string, allowNegative: boolean) {
   const digits = value.replace(/\D/g, "");
   if (!digits) return 0;
   const manwon = Number(digits);
-  const krw = Number.isSafeInteger(manwon) ? manwon * 10_000 : Number.MAX_SAFE_INTEGER;
+  // Direct input is clamped to the largest exact KRW value representable in manwon units.
+  const boundedManwon = Number.isSafeInteger(manwon) && manwon <= maxSafeManwon ? manwon : maxSafeManwon;
+  const krw = boundedManwon * 10_000;
+  if (!Number.isSafeInteger(krw)) return hasLeadingMinus && allowNegative ? -maxSafeKrwMultiple : maxSafeKrwMultiple;
   return normalizeKrw(hasLeadingMinus ? -krw : krw, allowNegative);
+}
+
+function digitOffset(value: string, characterOffset: number) {
+  return (value.slice(0, characterOffset).match(/\d/g) ?? []).length;
+}
+
+function characterOffset(value: string, digitsBeforeCaret: number) {
+  if (digitsBeforeCaret === 0) return 0;
+  let digitsSeen = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (/\d/.test(value[index])) digitsSeen += 1;
+    if (digitsSeen === digitsBeforeCaret) return index + 1;
+  }
+  return value.length;
 }
 
 export function MoneyInput({
@@ -73,7 +93,7 @@ export function MoneyInput({
   showPreview = true,
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const selectionRef = useRef<{ startDigits: number; endDigits: number } | null>(null);
   const normalizedValue = normalizeKrw(value, allowNegative);
   const displayValue = new Intl.NumberFormat("ko-KR").format(normalizedValue / 10_000);
 
@@ -81,14 +101,20 @@ export function MoneyInput({
     const input = inputRef.current;
     const selection = selectionRef.current;
     if (input && selection && document.activeElement === input) {
-      input.setSelectionRange(selection.start, selection.end);
+      input.setSelectionRange(
+        characterOffset(displayValue, selection.startDigits),
+        characterOffset(displayValue, selection.endDigits),
+      );
     }
   }, [displayValue]);
 
   const rememberSelection = () => {
     const input = inputRef.current;
     if (!input || input.selectionStart === null || input.selectionEnd === null) return;
-    selectionRef.current = { start: input.selectionStart, end: input.selectionEnd };
+    selectionRef.current = {
+      startDigits: digitOffset(input.value, input.selectionStart),
+      endDigits: digitOffset(input.value, input.selectionEnd),
+    };
   };
 
   return (

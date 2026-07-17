@@ -73,6 +73,21 @@ describe("MoneyInput", () => {
     expect(screen.getByRole("textbox", { name: "월급" })).toHaveValue("1,234");
   });
 
+  it("ignores whitespace and treats only a leading minus as negative", () => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput allowNegative onChange={onChange} />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "월급" }), {
+      target: { value: "  1 234  " },
+    });
+    expect(onChange).toHaveBeenLastCalledWith(12_340_000);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "월급" }), {
+      target: { value: "5-0" },
+    });
+    expect(onChange).toHaveBeenLastCalledWith(500_000);
+  });
+
   it("clamps negative direct entry unless negatives are allowed", () => {
     const clampedChange = vi.fn();
     const { unmount } = render(<ControlledMoneyInput onChange={clampedChange} />);
@@ -106,5 +121,74 @@ describe("MoneyInput", () => {
     expect(input).toHaveFocus();
     expect(input.selectionStart).toBe(1);
     expect(input.selectionEnd).toBe(2);
+  });
+
+  it("keeps the caret after the same logical digit when commas are inserted", () => {
+    const { rerender } = render(
+      <MoneyInput id="monthly-pay" label="월급" value={1_230_000} onChange={vi.fn()} />,
+    );
+    const input = screen.getByRole("textbox", { name: "월급" }) as HTMLInputElement;
+    input.focus();
+
+    fireEvent.change(input, { target: { value: "1234", selectionStart: 4, selectionEnd: 4 } });
+    rerender(<MoneyInput id="monthly-pay" label="월급" value={12_340_000} onChange={vi.fn()} />);
+    expect(input).toHaveValue("1,234");
+    expect(input.selectionStart).toBe(5);
+
+    rerender(<MoneyInput id="monthly-pay" label="월급" value={1_230_000} onChange={vi.fn()} />);
+    fireEvent.change(input, { target: { value: "1923", selectionStart: 2, selectionEnd: 2 } });
+    rerender(<MoneyInput id="monthly-pay" label="월급" value={19_230_000} onChange={vi.fn()} />);
+    expect(input).toHaveValue("1,923");
+    expect(input.selectionStart).toBe(3);
+  });
+
+  it("renders every default quick amount and supports a custom list", () => {
+    const { rerender } = render(
+      <MoneyInput id="monthly-pay" label="월급" value={0} onChange={vi.fn()} />,
+    );
+
+    for (const amount of [10, 50, 100, 500]) {
+      expect(screen.getByRole("button", { name: `월급에 ${amount}만원 더하기` })).toBeInTheDocument();
+    }
+
+    rerender(
+      <MoneyInput
+        id="monthly-pay"
+        label="월급"
+        value={0}
+        onChange={vi.fn()}
+        quickAmountsManwon={[20, 200]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "월급에 20만원 더하기" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "월급에 200만원 더하기" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "월급에 10만원 더하기" })).not.toBeInTheDocument();
+  });
+
+  it("hides the Korean money preview when requested", () => {
+    render(
+      <MoneyInput
+        id="monthly-pay"
+        label="월급"
+        value={5_200_000}
+        onChange={vi.fn()}
+        showPreview={false}
+      />,
+    );
+
+    expect(screen.queryByText("오백이십만원")).not.toBeInTheDocument();
+  });
+
+  it("clamps oversized manwon input to the largest safe KRW multiple", () => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput onChange={onChange} />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "월급" }), {
+      target: { value: "999999999999999999999999" },
+    });
+
+    const largestSafeKrwMultiple = Math.floor(Number.MAX_SAFE_INTEGER / 10_000) * 10_000;
+    expect(Number.isSafeInteger(largestSafeKrwMultiple)).toBe(true);
+    expect(onChange).toHaveBeenLastCalledWith(largestSafeKrwMultiple);
   });
 });
