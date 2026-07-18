@@ -82,6 +82,12 @@ export {
   type SpendingImpactStatus,
 } from "./spending-impact";
 export {
+  calculateYearEndTaxCredits,
+  type YearEndTaxCreditInput,
+  type YearEndTaxCreditReason,
+  type YearEndTaxCreditResult,
+} from "./year-end-tax";
+export {
   calculateSalaryNetPay,
   calculateSmeIncomeTaxReduction,
   type EligibilityConfirmation,

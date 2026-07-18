@@ -13,6 +13,7 @@ import {
 } from "./finance-scenario-model";
 import { FinanceVisualizations } from "./finance-visualizations";
 import { NetSalaryCalculator } from "./net-salary-calculator";
+import { YearEndTaxCalculator } from "./year-end-tax-calculator";
 import {
   getFinanceScenarioStorageKey,
   loadFinanceScenario,
@@ -174,7 +175,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
         </section>
 
         <div className="scroll-mt-20" id="finance-calculators">
-          {hydrated ? <NetSalaryCalculator currentMonthlyIncome={input.monthlyIncome} onApply={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} /> : null}
+          {hydrated ? <div className="grid gap-4"><NetSalaryCalculator currentMonthlyIncome={input.monthlyIncome} onApply={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} /><YearEndTaxCalculator currentMonthlySurplus={scenario.rawMonthlySurplus} /></div> : null}
         </div>
 
         <div className="scroll-mt-20" id="expense-management">
