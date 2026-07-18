@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Landmark, Target, WalletCards } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Calculator, Landmark, ListChecks, PiggyBank, ShieldCheck, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
@@ -81,6 +81,147 @@ function Metric({ icon, label, value, warning = false, testId }: { icon: ReactNo
   );
 }
 
+type StarterAction = {
+  label: string;
+  detail: string;
+  href: string;
+  tone: "mint" | "lilac" | "coral" | "blue";
+  icon: ReactNode;
+};
+
+function buildStarterActions(scenario: ReturnType<typeof calculateFinanceScenario>) {
+  const monthlyNeed = scenario.monthlyNonLoanExpense + scenario.totalLoanPayment;
+  const surplusRatio = scenario.monthlyIncome > 0 ? scenario.rawMonthlySurplus / scenario.monthlyIncome : 0;
+  const expenseRatio = scenario.monthlyIncome > 0 ? scenario.monthlyNonLoanExpense / scenario.monthlyIncome : 0;
+  const loanRatio = scenario.monthlyIncome > 0 ? scenario.totalLoanPayment / scenario.monthlyIncome : 0;
+  const emergencyMonths = monthlyNeed > 0 ? scenario.totalAssetBalances / monthlyNeed : 0;
+  const status = scenario.rawMonthlySurplus < 0
+    ? {
+        label: "적자 위험",
+        headline: `이번 달 ${formatShortMoney(Math.abs(scenario.rawMonthlySurplus))} 부족`,
+        detail: "지출 항목부터 줄여야 1억 계획이 무너지지 않습니다.",
+        tone: "coral" as const,
+      }
+    : emergencyMonths < 3
+      ? {
+          label: "비상금 우선",
+          headline: `비상금 ${emergencyMonths.toFixed(1)}개월`,
+          detail: "최소 3개월 생활비를 먼저 확보하는 흐름이 안정적입니다.",
+          tone: "blue" as const,
+        }
+      : surplusRatio >= 0.2
+        ? {
+            label: "저축 가능",
+            headline: `월 ${formatShortMoney(scenario.rawMonthlySurplus)} 배분 가능`,
+            detail: "여유금을 적금·파킹·대출상환 중 어디에 둘지 정하면 됩니다.",
+            tone: "mint" as const,
+          }
+        : {
+            label: "여유금 점검",
+            headline: `월 ${formatShortMoney(scenario.rawMonthlySurplus)} 남음`,
+            detail: "고정비와 생활비를 나눠 보면 저축 여력이 더 선명해집니다.",
+            tone: "lilac" as const,
+          };
+  const expenseLabel = scenario.rawMonthlySurplus < 0 ? "지출 줄이기" : expenseRatio > 0.55 ? "고정비 점검" : "지출 항목 점검";
+  const actions: StarterAction[] = [
+    {
+      label: "실수령액 확인",
+      detail: "소득세·비과세를 맞춰 월수입을 정확하게 저장",
+      href: "#finance-calculators",
+      tone: "lilac",
+      icon: <Calculator size={18} strokeWidth={1.9} />,
+    },
+    {
+      label: expenseLabel,
+      detail: expenseRatio > 0.55 ? "월급 대비 지출 비중이 높아 먼저 볼 항목" : "고정비와 생활비를 카테고리별로 정리",
+      href: "#expense-management",
+      tone: scenario.rawMonthlySurplus < 0 ? "coral" : "mint",
+      icon: <ListChecks size={18} strokeWidth={1.9} />,
+    },
+    {
+      label: "비상금 확인",
+      detail: `현재 자산 기준 약 ${emergencyMonths.toFixed(1)}개월 버틸 수 있음`,
+      href: "#finance-accounts",
+      tone: "blue",
+      icon: <ShieldCheck size={18} strokeWidth={1.9} />,
+    },
+    {
+      label: loanRatio > 0.12 ? "대출 부담 점검" : "적금·계좌 점검",
+      detail: loanRatio > 0.12 ? `월수입의 ${Math.round(loanRatio * 100)}%가 대출 납입` : "여유금이 어느 계좌로 가는지 확인",
+      href: loanRatio > 0.12 ? "#finance-loans" : "#finance-accounts",
+      tone: "lilac",
+      icon: <PiggyBank size={18} strokeWidth={1.9} />,
+    },
+  ];
+
+  return { status, actions, emergencyMonths, expenseRatio, loanRatio };
+}
+
+function StarterChecklist({ scenario }: { scenario: ReturnType<typeof calculateFinanceScenario> }) {
+  const starter = buildStarterActions(scenario);
+  const statusToneClass = {
+    mint: "bg-[#e4f8f1] text-[#087a63]",
+    blue: "bg-[#e8f3fc] text-[#3f739d]",
+    lilac: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[#9a4f58]",
+  }[starter.status.tone];
+  const actionToneClass = {
+    mint: "border-[#cdece2] bg-[#f7fffb] text-[#087a63]",
+    blue: "border-[#d8e8f6] bg-[#f7fbff] text-[#3f739d]",
+    lilac: "border-[#ded7f6] bg-[#fbfaff] text-[var(--wallet-primary-strong)]",
+    coral: "border-[#f2d5d8] bg-[#fff8f8] text-[#9a4f58]",
+  };
+
+  return (
+    <section aria-label="사회초년생 시작 체크" className="rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusToneClass}`}>{starter.status.label}</p>
+          <h2 className="mt-2 text-lg font-black text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
+          <p className="mt-1 text-sm font-semibold leading-5 text-[var(--wallet-muted)]">{starter.status.headline} · {starter.status.detail}</p>
+        </div>
+        <dl className="grid shrink-0 grid-cols-2 gap-2 text-xs font-bold text-[var(--wallet-muted)] sm:w-56">
+          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2"><dt>지출 비중</dt><dd className="mt-1 text-[var(--wallet-ink)]">{Math.round(starter.expenseRatio * 100)}%</dd></div>
+          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2"><dt>비상금</dt><dd className="mt-1 text-[var(--wallet-ink)]">{starter.emergencyMonths.toFixed(1)}개월</dd></div>
+        </dl>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        {starter.actions.map((action) => (
+          <a key={action.label} href={action.href} className={`group min-h-24 rounded-2xl border p-3 transition-transform active:scale-[0.99] ${actionToneClass[action.tone]}`}>
+            <span className="flex items-center gap-2 text-sm font-black">{action.icon}{action.label}</span>
+            <span className="mt-2 block text-xs font-semibold leading-5 text-[var(--wallet-muted)]">{action.detail}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CashFlowMiniBars({ scenario }: { scenario: ReturnType<typeof calculateFinanceScenario> }) {
+  const monthlyIncome = Math.max(1, scenario.monthlyIncome);
+  const rows = [
+    { label: "생활 지출", value: scenario.monthlyNonLoanExpense, color: "#e89aa0" },
+    { label: "대출 납입", value: scenario.totalLoanPayment, color: "#d7a44e" },
+    { label: "남는 돈", value: Math.max(0, scenario.rawMonthlySurplus), color: "#49bfa0" },
+  ];
+
+  return (
+    <div className="grid gap-3 rounded-2xl bg-[var(--wallet-surface-tint)] p-3">
+      {rows.map((row) => (
+        <div key={row.label}>
+          <div className="mb-1 flex justify-between gap-3 text-xs font-bold text-[var(--wallet-muted)]">
+            <span>{row.label}</span>
+            <span className="tabular-nums text-[var(--wallet-ink)]">{formatCurrency(row.value)}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round((row.value / monthlyIncome) * 100))}%`, backgroundColor: row.color }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [input, setInput] = useState(initialFinanceScenario);
   const [hydrated, setHydrated] = useState(false);
@@ -132,6 +273,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const monthsToGoal = useMemo(() => calculateScenarioMonthsToGoal(input, goalAmount, 1_200, calculationReferenceDate), [calculationReferenceDate, input]);
   const progressPercent = Math.max(0, Math.min(100, Math.round((scenario.netWorth / goalAmount) * 100)));
   const remainingAmount = goalAmount - scenario.netWorth;
+  const isNetWorthNegative = scenario.netWorth < 0;
 
   return (
     <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
@@ -143,12 +285,17 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
       {storageNotice && <p role="status" className="mb-4 rounded-2xl bg-[var(--wallet-coral-soft)] px-4 py-3 text-sm font-semibold text-[#9a4f58]">{storageNotice}</p>}
 
       <div className="grid gap-5">
-        <section aria-label="자산 요약" className="overflow-hidden rounded-[24px] border border-[#d8cff8] bg-[#7560c9] text-white shadow-[var(--wallet-shadow)]">
+        <section aria-label="자산 요약" className="overflow-hidden rounded-[24px] border border-[#d8cff8] bg-[#4f46a5] text-white shadow-[var(--wallet-shadow)]">
           <div className="p-5 sm:p-7">
             <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#eee9ff]">현재 순자산</p><span className="grid size-10 place-items-center rounded-2xl bg-white/15"><Target aria-hidden="true" className="text-[#b9f0df]" size={22} /></span></div>
             <p aria-live="polite" className={`mt-2 break-words text-[2.1rem] font-black leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[#ffd1d4]" : "text-white"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label="1억 목표 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[#49bfa0] transition-[width]" style={{ width: `${progressPercent}%` }} /></div>
-            <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold text-[#eee9ff]">남은 목표 <strong className="ml-1 text-white">{formatShortMoney(remainingAmount)}</strong></span><span className="font-semibold text-[#eee9ff]">예상 <strong className="ml-1 text-[#b9f0df]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold text-[#eee9ff]">
+              <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">보유 자산</span><strong className="mt-1 block text-white">{formatShortMoney(scenario.totalAssetBalances)}</strong></div>
+              <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">등록 부채</span><strong className="mt-1 block text-white">{formatShortMoney(scenario.totalLiabilities)}</strong></div>
+              <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">월 여유</span><strong className={`mt-1 block ${scenario.rawMonthlySurplus < 0 ? "text-[#ffd1d4]" : "text-[#b9f0df]"}`}>{formatShortMoney(scenario.rawMonthlySurplus)}</strong></div>
+            </div>
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[#49bfa0] transition-[width]" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
+            <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold text-[#eee9ff]">{isNetWorthNegative ? "부채 초과" : "남은 목표"} <strong className="ml-1 text-white">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-semibold text-[#eee9ff]">예상 <strong className="ml-1 text-[#b9f0df]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
           </div>
           <dl className="grid grid-cols-2 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] sm:grid-cols-4 sm:divide-x sm:divide-[var(--wallet-line)]">
             <Metric icon={<ArrowDownToLine size={16} />} label="월 수입" value={scenario.monthlyIncome} />
@@ -157,6 +304,8 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
             <div aria-live="polite"><Metric icon={<WalletCards size={16} />} label="상환 후 여유" value={scenario.rawMonthlySurplus} warning={scenario.rawMonthlySurplus < 0} testId="overview-monthly-surplus" /></div>
           </dl>
         </section>
+
+        <StarterChecklist scenario={scenario} />
 
         <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-20 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
           <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
@@ -167,6 +316,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
                 <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
                 <p className="mt-2 text-2xl font-black tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
                 <a className="mt-2 w-fit text-sm font-bold text-[var(--wallet-primary-strong)] underline-offset-4 hover:underline" href="#expense-management">세부 내역 관리</a>
+                <div className="mt-4"><CashFlowMiniBars scenario={scenario} /></div>
               </div>
             </div>
           ) : (

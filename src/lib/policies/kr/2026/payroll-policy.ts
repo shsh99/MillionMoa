@@ -8,7 +8,7 @@ export const KR_PAYROLL_POLICY_2026 = {
   taxYear: 2026,
   effectiveFrom: "2026-01-01",
   effectiveTo: "2026-12-31",
-  verifiedAt: "2026-07-17",
+  verifiedAt: "2026-07-18",
   pension: {
     employeeRate: 0.0475,
     bounds: [
@@ -24,9 +24,9 @@ export const KR_PAYROLL_POLICY_2026 = {
     effectiveFrom: "2026-03-01",
     withholdingRatios: [0.8, 1, 1.2],
     childTaxCreditMonthlyAdjustments: {
-      oneEligibleChild: 20_830,
-      twoEligibleChildren: 45_830,
-      additionalEligibleChildFromThird: 33_330,
+      oneEligibleChild: 12_500,
+      twoEligibleChildren: 29_160,
+      additionalEligibleChildFromThird: 25_000,
     },
   },
   nonTaxableMonthlyLimits: {

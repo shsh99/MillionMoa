@@ -38,11 +38,31 @@ describe("DashboardOverview", () => {
     render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
 
     expect(screen.getByRole("heading", { name: "1억을 향한 자산 지도" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "사회초년생 시작 체크" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "이번 달 시작 체크" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /실수령액 확인/ })).toHaveAttribute("href", "#finance-calculators");
+    expect(screen.getByRole("link", { name: /고정비 점검/ })).toHaveAttribute("href", "#expense-management");
     expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("7,000,000원");
     expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "지출 관리" })).toBeInTheDocument();
+  });
+
+  it("prioritizes expense action when a beginner plan starts in monthly deficit", async () => {
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: {
+        ...initialFinanceScenario,
+        monthlyIncome: 1_800_000,
+      },
+    }));
+
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
+
+    await waitFor(() => expect(screen.getByText("적자 위험")).toBeInTheDocument());
+    expect(screen.getByText(/이번 달 .*부족/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /지출 줄이기/ })).toHaveAttribute("href", "#expense-management");
   });
 
   it("uses categorized expenses as the single cash-flow source", async () => {
