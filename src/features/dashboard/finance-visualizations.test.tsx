@@ -50,7 +50,7 @@ function renderVisualizations() {
 
 describe("FinanceVisualizations", () => {
   it("uses the selected wallet chart palette", () => {
-    expect(walletChartColors).toEqual(["#7560c9", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#947bd8"]);
+    expect(walletChartColors).toEqual(["#5b5bd6", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#8d79d6"]);
   });
 
   it("gives each visualization icon a semantic pastel tone", () => {
@@ -66,11 +66,12 @@ describe("FinanceVisualizations", () => {
     renderVisualizations();
 
     expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "그래프 핵심 요약" })).toBeInTheDocument();
     expect(screen.getByText("현재 순자산 -600만원")).toBeInTheDocument();
-    expect(screen.getByText("0원 기준선을 포함해 음수 구간도 표시합니다.")).toBeInTheDocument();
+    expect(screen.getByText("부채 반영선이 실제 목표 판단 기준입니다.")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "이번 달 수입과 지출 및 대출 납입 비교" })).toBeInTheDocument();
-    expect(screen.getByLabelText("월 현금흐름 요약")).toHaveTextContent("월 수입 +320만원");
-    expect(screen.getByLabelText("월 현금흐름 요약")).toHaveTextContent("비대출 지출 -280만원");
+    expect(screen.getByLabelText("월급 흐름 단계")).toHaveTextContent("월급 입금+320만원");
+    expect(screen.getByLabelText("월급 흐름 단계")).toHaveTextContent("생활·고정비-280만원");
   });
 
   it("shows asset composition as a donut legend with account-level values", () => {
@@ -88,6 +89,7 @@ describe("FinanceVisualizations", () => {
     renderVisualizations();
 
     const table = screen.getByRole("table", { name: "대출별 상환 현황" });
+    expect(screen.getByRole("list", { name: "모바일 대출 상환 카드" })).toBeInTheDocument();
     expect(within(table).getByText("신용대출")).toBeInTheDocument();
     expect(within(table).getByText("원리금균등")).toBeInTheDocument();
     expect(within(table).getByText("학자금대출")).toBeInTheDocument();
