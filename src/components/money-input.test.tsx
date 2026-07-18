@@ -259,6 +259,43 @@ describe("MoneyInput", () => {
     expect(screen.queryByRole("button", { name: "월급에 10만원 더하기" })).not.toBeInTheDocument();
   });
 
+  it("supports subtracting quick amounts for adjustment-heavy inputs", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <MoneyInput
+        id="monthly-pay"
+        label="월급"
+        value={3_200_000}
+        onChange={onChange}
+        quickAmountMode="adjust"
+        quickAmountsManwon={[50, 100]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "월급에서 50만원 빼기" }));
+    expect(onChange).toHaveBeenLastCalledWith(2_700_000);
+    expect(screen.getByRole("button", { name: "월급에 100만원 더하기" })).toBeInTheDocument();
+  });
+
+  it("supports setting common amounts without repeated zeros", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <MoneyInput
+        id="monthly-pay"
+        label="월급"
+        value={3_200_000}
+        onChange={onChange}
+        quickAmountMode="set"
+        quickAmountsManwon={[250, 300]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "월급을 250만원으로 설정" }));
+    expect(onChange).toHaveBeenLastCalledWith(2_500_000);
+  });
+
   it("filters invalid quick amounts and clamps boundary additions to a safe manwon multiple", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

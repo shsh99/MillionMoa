@@ -9,6 +9,7 @@ export type MoneyInputProps = {
   value: number;
   onChange: (value: number) => void;
   quickAmountsManwon?: number[];
+  quickAmountMode?: "add" | "adjust" | "set";
   allowNegative?: boolean;
   showPreview?: boolean;
 };
@@ -121,6 +122,7 @@ export function MoneyInput({
   value,
   onChange,
   quickAmountsManwon = [10, 50, 100, 500],
+  quickAmountMode = "add",
   allowNegative = false,
   showPreview = true,
 }: MoneyInputProps) {
@@ -286,20 +288,49 @@ export function MoneyInput({
           {formatKoreanMoney(normalizedValue)}
         </p>
       )}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={`${label} 빠른 금액 입력`}>
+      <div className={`grid gap-2 ${quickAmountMode === "adjust" ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`} aria-label={`${label} 빠른 금액 입력`}>
         {validQuickAmounts.map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            aria-label={`${label}에 ${amount}만원 더하기`}
-            className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-            onClick={() => {
-              setIncompleteDraft(null);
-              onChange(boundedQuickAddition(normalizedValue, amount, allowNegative));
-            }}
-          >
-            +{new Intl.NumberFormat("ko-KR").format(amount)}만
-          </button>
+          quickAmountMode === "adjust" ? (
+            [
+              <button
+                key={`${amount}-subtract`}
+                type="button"
+                aria-label={`${label}에서 ${amount}만원 빼기`}
+                className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-surface-tint)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-muted)] hover:bg-[var(--wallet-coral-soft)] hover:text-[#9a4f58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                onClick={() => {
+                  setIncompleteDraft(null);
+                  onChange(boundedQuickAddition(normalizedValue, -amount, allowNegative));
+                }}
+              >
+                -{new Intl.NumberFormat("ko-KR").format(amount)}만
+              </button>,
+              <button
+                key={`${amount}-add`}
+                type="button"
+                aria-label={`${label}에 ${amount}만원 더하기`}
+                className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                onClick={() => {
+                  setIncompleteDraft(null);
+                  onChange(boundedQuickAddition(normalizedValue, amount, allowNegative));
+                }}
+              >
+                +{new Intl.NumberFormat("ko-KR").format(amount)}만
+              </button>,
+            ]
+          ) : (
+            <button
+              key={amount}
+              type="button"
+              aria-label={quickAmountMode === "set" ? `${label}을 ${amount}만원으로 설정` : `${label}에 ${amount}만원 더하기`}
+              className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+              onClick={() => {
+                setIncompleteDraft(null);
+                onChange(quickAmountMode === "set" ? normalizeKrw(amount * 10_000, allowNegative) : boundedQuickAddition(normalizedValue, amount, allowNegative));
+              }}
+            >
+              {quickAmountMode === "set" ? "" : "+"}{new Intl.NumberFormat("ko-KR").format(amount)}만
+            </button>
+          )
         ))}
       </div>
     </div>
