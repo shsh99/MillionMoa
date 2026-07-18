@@ -81,3 +81,19 @@ export {
   type SpendingImpactResult,
   type SpendingImpactStatus,
 } from "./spending-impact";
+export {
+  calculateSalaryNetPay,
+  calculateSmeIncomeTaxReduction,
+  type EligibilityConfirmation,
+  type IncomeTaxBeforeReduction,
+  type IncomeTaxProvenance,
+  type InsuranceBases,
+  type PayrollDeductions,
+  type SalaryNetPayInput,
+  type SalaryNetPayReason,
+  type SalaryNetPayResult,
+  type SmeEligibilityType,
+  type SmeIncomeTaxReductionInput,
+  type SmeIncomeTaxReductionReason,
+  type SmeIncomeTaxReductionResult,
+} from "./payroll";

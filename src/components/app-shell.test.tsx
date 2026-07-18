@@ -40,7 +40,7 @@ describe("AppShell", () => {
     );
     expect(within(desktopNav).getByRole("link", { name: "계산기" })).toHaveAttribute(
       "href",
-      "#goal-quick-planner-title",
+      "#finance-calculators",
     );
 
     const mobileNav = screen.getByRole("navigation", { name: "모바일 주요 메뉴" });
