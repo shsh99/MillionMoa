@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BadgeCheck, Banknote, ChevronDown, Info, ReceiptText, ShieldCheck, Sparkles } from "lucide-react";
+import { BadgeCheck, Banknote, ChevronDown, ExternalLink, Info, ReceiptText, ShieldCheck, Sparkles, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
+import { calculateNonTaxablePay } from "../../lib/calculators/payroll/non-taxable-pay";
 import { calculateSalaryNetPay } from "../../lib/calculators/payroll/salary-net-pay";
 import { calculateSmeIncomeTaxReduction } from "../../lib/calculators/payroll/sme-income-tax-reduction";
-import type { SalaryNetPayReason, SmeEligibilityType, SmeIncomeTaxReductionReason } from "../../lib/calculators/payroll/types";
+import type { IncomeTaxProvenance, SalaryNetPayReason, SmeEligibilityType, SmeIncomeTaxReductionReason } from "../../lib/calculators/payroll/types";
 
 type NetSalaryCalculatorProps = {
   currentMonthlyIncome: number;
@@ -53,8 +54,21 @@ const SME_REDUCTION_MESSAGES: Record<SmeIncomeTaxReductionReason, string> = {
 
 export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalaryCalculatorProps) {
   const [grossPay, setGrossPay] = useState(3_200_000);
-  const [nonTaxablePay, setNonTaxablePay] = useState(200_000);
-  const [incomeTaxBeforeReduction, setIncomeTaxBeforeReduction] = useState(70_000);
+  const [mealAllowance, setMealAllowance] = useState(0);
+  const [selfDrivingAllowance, setSelfDrivingAllowance] = useState(0);
+  const [childcareAllowance, setChildcareAllowance] = useState(0);
+  const [childcareEligibleChildCount, setChildcareEligibleChildCount] = useState(0);
+  const [productionOvertimeAllowance, setProductionOvertimeAllowance] = useState(0);
+  const [productionOvertimeAnnualAlreadyUsed, setProductionOvertimeAnnualAlreadyUsed] = useState(0);
+  const [productionWorkerEligible, setProductionWorkerEligible] = useState(false);
+  const [otherConfirmedNonTaxablePay, setOtherConfirmedNonTaxablePay] = useState(0);
+  const [otherConfirmedNonTaxablePayVerified, setOtherConfirmedNonTaxablePayVerified] = useState(false);
+  const [incomeTaxBeforeReduction, setIncomeTaxBeforeReduction] = useState(0);
+  const [zeroIncomeTaxConfirmed, setZeroIncomeTaxConfirmed] = useState(false);
+  const [incomeTaxProvenance, setIncomeTaxProvenance] = useState<IncomeTaxProvenance>("payslip");
+  const [familyCount, setFamilyCount] = useState(1);
+  const [eligibleChildCount, setEligibleChildCount] = useState(0);
+  const [withholdingRatio, setWithholdingRatio] = useState(100);
   const [smeReductionEnabled, setSmeReductionEnabled] = useState(false);
   const [eligibilityType, setEligibilityType] = useState<SmeEligibilityType>("youth");
   const [paymentDate, setPaymentDate] = useState("2026-07-25");
@@ -70,6 +84,20 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
   const [employmentBase, setEmploymentBase] = useState(3_000_000);
   const [useCustomBases, setUseCustomBases] = useState(false);
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
+
+  const nonTaxable = useMemo(() => calculateNonTaxablePay({
+    mealAllowance,
+    selfDrivingAllowance,
+    childcareAllowance,
+    childcareEligibleChildCount,
+    productionOvertimeAllowance,
+    productionOvertimeAnnualAlreadyUsed,
+    productionWorkerEligible,
+    otherConfirmedNonTaxablePay,
+    otherConfirmedNonTaxablePayVerified,
+  }), [childcareAllowance, childcareEligibleChildCount, mealAllowance, otherConfirmedNonTaxablePay, otherConfirmedNonTaxablePayVerified, productionOvertimeAllowance, productionOvertimeAnnualAlreadyUsed, productionWorkerEligible, selfDrivingAllowance]);
+  const nonTaxablePay = nonTaxable.status === "estimated" ? nonTaxable.totalNonTaxablePay : 0;
+  const taxableMonthlyPay = Math.max(0, grossPay - nonTaxablePay);
 
   const reduction = useMemo(() => smeReductionEnabled
     ? calculateSmeIncomeTaxReduction({
@@ -91,7 +119,7 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
     paymentDate,
     grossMonthlyPay: grossPay,
     nonTaxableMonthlyPay: nonTaxablePay,
-    incomeTaxBeforeReduction: { amount: incomeTaxBeforeReduction, provenance: "payslip" },
+    incomeTaxBeforeReduction: { amount: incomeTaxBeforeReduction, provenance: incomeTaxProvenance },
     incomeTaxReduction: Math.min(reductionAmount, incomeTaxBeforeReduction),
     ...(useCustomBases ? {
       insuranceBases: {
@@ -100,9 +128,11 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
         employmentMonthlyRemuneration: employmentBase,
       },
     } : {}),
-  }), [employmentBase, grossPay, healthBase, incomeTaxBeforeReduction, nonTaxablePay, paymentDate, pensionBase, reductionAmount, useCustomBases]);
+  }), [employmentBase, grossPay, healthBase, incomeTaxBeforeReduction, incomeTaxProvenance, nonTaxablePay, paymentDate, pensionBase, reductionAmount, useCustomBases]);
   const estimatedResult = result.status === "estimated" ? result : null;
   const salaryInvalidMessage = result.status === "invalid" ? SALARY_INVALID_MESSAGES[result.reason] : null;
+  const nonTaxableInvalidMessage = nonTaxable.status === "invalid" ? "비과세 항목 금액과 자녀 수는 0 이상의 정수로 입력하세요." : null;
+  const canApplyResult = Boolean(estimatedResult) && !nonTaxableInvalidMessage && (incomeTaxBeforeReduction > 0 || zeroIncomeTaxConfirmed);
   const reductionMessage = reduction && reduction.status !== "eligible-estimate" ? SME_REDUCTION_MESSAGES[reduction.reason] : null;
 
   const deductionRows = [
@@ -128,11 +158,69 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
         <div className="space-y-5">
           <label className="block text-sm font-bold text-[var(--wallet-ink)]">급여 지급일<input aria-label="급여 지급일" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold" max="2026-12-31" min="2026-01-01" onChange={(event) => setPaymentDate(event.target.value)} type="date" value={paymentDate} /></label>
           <MoneyInput id="salary-gross" label="월 세전 급여" value={grossPay} onChange={setGrossPay} quickAmountsManwon={[10, 50, 100, 500]} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <MoneyInput id="salary-nontaxable" label="월 비과세 금액" value={nonTaxablePay} onChange={setNonTaxablePay} quickAmountsManwon={[10, 20]} />
-            <MoneyInput id="salary-income-tax" label="월 소득세" value={incomeTaxBeforeReduction} onChange={setIncomeTaxBeforeReduction} quickAmountsManwon={[1, 5]} />
+          <div className="rounded-[22px] border border-[#d9f0e8] bg-[#f8fffc] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-extrabold text-[#247a65]">비과세 항목</p>
+                <h3 className="mt-1 text-base font-black text-[var(--wallet-ink)]">급여명세서 항목별로 입력</h3>
+              </div>
+              <span className="grid size-10 place-items-center rounded-2xl bg-white text-[#247a65]"><WalletCards aria-hidden="true" size={20} /></span>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <MoneyInput id="salary-meal-allowance" label="식대" value={mealAllowance} onChange={setMealAllowance} quickAmountsManwon={[10, 20]} />
+              <MoneyInput id="salary-car-allowance" label="자기차량운전보조금" value={selfDrivingAllowance} onChange={setSelfDrivingAllowance} quickAmountsManwon={[10, 20]} />
+              <MoneyInput id="salary-childcare-allowance" label="6세 이하 보육수당" value={childcareAllowance} onChange={setChildcareAllowance} quickAmountsManwon={[10, 20]} />
+              <MoneyInput id="salary-production-overtime" label="생산직 연장·야간·휴일수당" value={productionOvertimeAllowance} onChange={setProductionOvertimeAllowance} quickAmountsManwon={[10, 20]} />
+            </div>
+            <label className="mt-4 block text-xs font-bold text-[var(--wallet-muted)]">6세 이하 자녀 수<input aria-label="6세 이하 자녀 수" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold tabular-nums" min={0} max={10} onChange={(event) => setChildcareEligibleChildCount(Number(event.target.value))} type="number" value={childcareEligibleChildCount} /></label>
+            <div className="mt-4">
+              <MoneyInput id="salary-production-used" label="올해 이미 비과세 반영한 생산직 수당" value={productionOvertimeAnnualAlreadyUsed} onChange={setProductionOvertimeAnnualAlreadyUsed} quickAmountsManwon={[20, 100]} />
+            </div>
+            <label className="mt-4 flex min-h-11 items-center gap-3 rounded-2xl bg-white px-3 text-xs font-bold text-[var(--wallet-muted)]">
+              <input checked={productionWorkerEligible} className="size-5 accent-[var(--wallet-primary)]" onChange={(event) => setProductionWorkerEligible(event.target.checked)} type="checkbox" />
+              생산직 수당 비과세 요건을 확인했어요(월정액급여 260만원 이하, 전년도 총급여 3,700만원 이하 등)
+            </label>
+            <div className="mt-4">
+              <MoneyInput id="salary-other-nontaxable" label="기타 비과세" value={otherConfirmedNonTaxablePay} onChange={setOtherConfirmedNonTaxablePay} quickAmountsManwon={[10, 20]} />
+            </div>
+            <label className="mt-4 flex min-h-11 items-center gap-3 rounded-2xl bg-white px-3 text-xs font-bold text-[var(--wallet-muted)]">
+              <input checked={otherConfirmedNonTaxablePayVerified} className="size-5 accent-[var(--wallet-primary)]" onChange={(event) => setOtherConfirmedNonTaxablePayVerified(event.target.checked)} type="checkbox" />
+              기타 비과세 금액이 급여명세서에 비과세로 확정되어 있어요
+            </label>
+            {nonTaxableInvalidMessage && <p className="mt-3 rounded-xl bg-[var(--wallet-coral-soft)] px-3 py-2 text-xs font-bold text-[#9a4f58]">{nonTaxableInvalidMessage}</p>}
+            {nonTaxable.status === "estimated" && (
+              <div className="mt-4 grid gap-3 rounded-2xl bg-white p-3 text-xs font-bold text-[var(--wallet-muted)] sm:grid-cols-2">
+                <div><span className="block">비과세 합계</span><strong className="mt-1 block text-lg text-[#247a65]">{formatCurrency(nonTaxable.totalNonTaxablePay)}</strong></div>
+                <div><span className="block">홈택스 월급여 입력값</span><strong className="mt-1 block text-lg text-[var(--wallet-ink)]">{formatCurrency(taxableMonthlyPay)}</strong></div>
+                {nonTaxable.items.map((item) => (
+                  <div key={item.key} className="rounded-xl bg-[var(--wallet-surface-tint)] px-3 py-2">
+                    <span className="block text-[var(--wallet-ink)]">{item.label} · {item.limitLabel}</span>
+                    <span>반영 {formatCurrency(item.applied)}{item.taxableExcess > 0 ? ` · 초과 과세 ${formatCurrency(item.taxableExcess)}` : ""}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="flex gap-2 rounded-2xl bg-[var(--wallet-surface-tint)] p-3 text-xs font-semibold leading-5 text-[var(--wallet-muted)]"><Info aria-hidden="true" className="mt-0.5 shrink-0" size={15} />월 소득세는 홈택스 간이세액표 조회값이나 급여명세서 금액을 입력하세요. 연봉 세율로 임의 환산하지 않습니다.</p>
+          <div className="rounded-[22px] border border-[var(--wallet-line)] bg-white p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-bold text-[var(--wallet-ink)]">소득세 입력 기준<select aria-label="소득세 입력 기준" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold" onChange={(event) => setIncomeTaxProvenance(event.target.value as IncomeTaxProvenance)} value={incomeTaxProvenance}><option value="payslip">급여명세서</option><option value="official-table">홈택스 간이세액표</option></select></label>
+              <MoneyInput id="salary-income-tax" label="월 소득세" value={incomeTaxBeforeReduction} onChange={setIncomeTaxBeforeReduction} quickAmountsManwon={[1, 5]} />
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <label className="text-xs font-bold text-[var(--wallet-muted)]">공제대상 가족 수<input aria-label="공제대상 가족 수" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] px-3 font-bold tabular-nums" min={1} max={11} onChange={(event) => setFamilyCount(Number(event.target.value))} type="number" value={familyCount} /></label>
+              <label className="text-xs font-bold text-[var(--wallet-muted)]">8-20세 자녀 수<input aria-label="8-20세 자녀 수" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] px-3 font-bold tabular-nums" min={0} max={11} onChange={(event) => setEligibleChildCount(Number(event.target.value))} type="number" value={eligibleChildCount} /></label>
+              <label className="text-xs font-bold text-[var(--wallet-muted)]">원천징수율<select aria-label="원천징수율" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold" onChange={(event) => setWithholdingRatio(Number(event.target.value))} value={withholdingRatio}><option value={80}>80%</option><option value={100}>100%</option><option value={120}>120%</option></select></label>
+            </div>
+            <p className="mt-3 flex gap-2 rounded-2xl bg-[var(--wallet-surface-tint)] p-3 text-xs font-semibold leading-5 text-[var(--wallet-muted)]"><Info aria-hidden="true" className="mt-0.5 shrink-0" size={15} />{incomeTaxBeforeReduction === 0 ? "소득세 입력 필요. " : ""}2026.03.01 이후 홈택스 근로소득 간이세액표에서 월급여 {formatCurrency(taxableMonthlyPay)}, 가족 {familyCount}명, 8-20세 자녀 {eligibleChildCount}명, 원천징수율 {withholdingRatio}%로 조회한 소득세 또는 급여명세서 금액을 입력하세요.</p>
+            <p className="mt-2 text-xs font-bold text-[var(--wallet-muted)]">가족 수·자녀 수·원천징수율은 홈택스 조회를 돕는 값이며, 입력한 월 소득세 금액을 자동 보정하지 않습니다.</p>
+            {incomeTaxBeforeReduction === 0 && (
+              <label className="mt-3 flex min-h-11 items-center gap-3 rounded-2xl bg-[#fff8e8] px-3 text-xs font-bold text-[#8a5b08]">
+                <input checked={zeroIncomeTaxConfirmed} className="size-5 accent-[var(--wallet-primary)]" onChange={(event) => setZeroIncomeTaxConfirmed(event.target.checked)} type="checkbox" />
+                홈택스 또는 급여명세서에서 월 소득세 0원을 확인했어요
+              </label>
+            )}
+            <a className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-2xl bg-[var(--wallet-primary-soft)] px-4 text-xs font-black text-[var(--wallet-primary-strong)]" href="https://hometax.go.kr/websquare/websquare.html?tm2lIdx=410600000&tm3lIdx=4106030000&tmIdx=41&w2xPath=%2Fui%2Fpp%2Findex_pp.xml" target="_blank" rel="noreferrer">홈택스 간이세액표 열기<ExternalLink aria-hidden="true" size={14} /></a>
+          </div>
 
           <label className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[#cdece2] bg-[var(--wallet-mint-soft)] px-4 py-3">
             <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-white text-[#247a65]"><Sparkles aria-hidden="true" size={18} /></span><span><strong className="block text-sm text-[var(--wallet-ink)]">중소기업 취업자 소득세 감면</strong><span className="text-xs font-semibold text-[var(--wallet-muted)]">회사·업종·근로자 요건 확인 시 예상 감면액 반영</span></span></span>
@@ -156,11 +244,11 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
           </div>
           <div className="mt-5 flex justify-between border-t border-white/15 pt-4 text-sm font-bold"><span className="text-[#d9d2f8]">총 공제</span><span>{formatCurrency(estimatedResult?.deductions.total ?? 0)}</span></div>
           {estimatedResult && <ul className="mt-5 space-y-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-[#d9d2f8]">{estimatedResult.assumptions.map((assumption) => <li key={assumption}>- {assumption}</li>)}<li>- 적용하면 이 브라우저의 내 계획 월 수입으로 저장됩니다.</li></ul>}
-          <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!estimatedResult || estimatedResult.estimatedMonthlyTakeHomePay === currentMonthlyIncome} onClick={() => { if (!estimatedResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
+          <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!canApplyResult || estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome} onClick={() => { if (!estimatedResult || !canApplyResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
           {appliedNotice && <p aria-live="polite" className="mt-3 text-center text-xs font-bold text-[#8ee0c8]">{appliedNotice}</p>}
         </aside>
       </div>
-      <div className="border-t border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-5 py-4 text-xs font-semibold leading-5 text-[var(--wallet-muted)] sm:px-6">2026년 국민연금·건강보험·장기요양·고용보험 요율을 반영한 추정치입니다. 실제 고지 기준액, 회사 자격, 급여 항목과 원 단위 절사에 따라 달라질 수 있습니다.</div>
+      <div className="border-t border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-5 py-4 text-xs font-semibold leading-5 text-[var(--wallet-muted)] sm:px-6">보험료는 2026년 공단 요율, 소득세는 2026.03.01 이후 홈택스 근로소득 간이세액표 또는 급여명세서 입력값, 비과세는 국세청·법령상 항목별 한도를 기준으로 반영합니다. 실제 고지 기준액, 회사 자격, 급여 항목과 원 단위 절사에 따라 달라질 수 있습니다.</div>
     </section>
   );
 }
