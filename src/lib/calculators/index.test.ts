@@ -10,6 +10,7 @@ import {
   calculateScenarioProjection,
   calculateSourceBackedScenarioProjection,
   calculateSpendingImpact,
+  calculateYearEndTaxCredits,
   compareScenarioProjections,
   sweepMonthEndCash,
 } from "@/lib/calculators";
@@ -178,6 +179,19 @@ describe("calculator export surface", () => {
         annualReductionAlreadyUsed: 0,
       }).status,
     ).toBe("eligible-estimate");
+
+    expect(
+      calculateYearEndTaxCredits({
+        annualGrossPay: 48_000_000,
+        prepaidIncomeTax: 1_000_000,
+        pensionSavingsContribution: 6_000_000,
+        retirementPensionContribution: 3_000_000,
+        monthlyRentPaid: 500_000,
+        rentHouseholdEligible: true,
+        rentHousingEligible: true,
+        rentContractEligible: true,
+      }).status,
+    ).toBe("estimated");
   });
 
   it("exports cash allocation calculators from the cash-allocation subpath", () => {
