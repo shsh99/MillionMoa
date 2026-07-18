@@ -4,20 +4,20 @@
 
 :root {
   color-scheme: light;
-  --wallet-page: #f7f5fc;
+  --wallet-page: #f5f7fb;
   --wallet-surface: #fff;
-  --wallet-surface-tint: #fbfaff;
-  --wallet-ink: #242236;
-  --wallet-muted: #747187;
-  --wallet-line: #e8e3f1;
-  --wallet-primary: #7560c9;
-  --wallet-primary-strong: #5e49b1;
-  --wallet-primary-soft: #eee9ff;
+  --wallet-surface-tint: #f8fafc;
+  --wallet-ink: #172033;
+  --wallet-muted: #687386;
+  --wallet-line: #e2e8f0;
+  --wallet-primary: #5b5bd6;
+  --wallet-primary-strong: #4542a8;
+  --wallet-primary-soft: #eef0ff;
   --wallet-mint: #49bfa0;
   --wallet-mint-soft: #e4f8f1;
   --wallet-coral: #de7c83;
   --wallet-coral-soft: #fff0f1;
-  --wallet-shadow: 0 10px 30px rgba(77, 65, 120, 0.1);
+  --wallet-shadow: 0 14px 34px rgba(31, 41, 55, 0.08);
   --money-ink: var(--wallet-ink);
   --money-muted: var(--wallet-muted);
   --money-line: var(--wallet-line);

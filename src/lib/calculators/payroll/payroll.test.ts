@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { KR_PAYROLL_POLICY_2026 } from "@/lib/policies/kr/2026";
 import { calculateSalaryNetPay } from "./salary-net-pay";
 import { calculateSmeIncomeTaxReduction } from "./sme-income-tax-reduction";
 
@@ -58,6 +59,14 @@ describe("calculateSalaryNetPay", () => {
     expect(result.deductions.nationalPension).toBe(95_000);
     expect(result.deductions.healthInsurance).toBe(75_495);
     expect(result.deductions.employmentInsurance).toBe(19_800);
+  });
+
+  it("documents the current official simplified-tax child monthly adjustments", () => {
+    expect(KR_PAYROLL_POLICY_2026.simplifiedIncomeTaxTable.childTaxCreditMonthlyAdjustments).toEqual({
+      oneEligibleChild: 12_500,
+      twoEligibleChildren: 29_160,
+      additionalEligibleChildFromThird: 25_000,
+    });
   });
 
   it("does not charge a minimum pension contribution when pay is zero", () => {
