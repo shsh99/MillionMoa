@@ -72,6 +72,34 @@ describe("finance scenario storage", () => {
     });
   });
 
+  it("stores and restores an explicit save timestamp in a version 2 envelope", () => {
+    const storage = new MemoryStorage();
+    const savedAt = "2026-07-19T09:30:00.000Z";
+
+    saveFinanceScenario(storage, OWNER_ID, scenario, { savedAt });
+
+    expect(JSON.parse(storage.values.get(getFinanceScenarioStorageKey(OWNER_ID))!)).toEqual({
+      version: 2,
+      scenario,
+      savedAt,
+    });
+    expect(loadFinanceScenario(storage, OWNER_ID, { ...scenario, assets: [] })).toEqual({
+      scenario,
+      source: "saved",
+      savedAt,
+    });
+  });
+
+  it("continues to load version 2 envelopes without save metadata", () => {
+    const storage = new MemoryStorage();
+    storage.values.set(getFinanceScenarioStorageKey(OWNER_ID), JSON.stringify({ version: 2, scenario }));
+
+    expect(loadFinanceScenario(storage, OWNER_ID, { ...scenario, assets: [] })).toEqual({
+      scenario,
+      source: "saved",
+    });
+  });
+
   it("isolates saved scenarios by encoded owner scope", () => {
     const storage = new MemoryStorage();
     const secondScenario = { ...scenario, monthlyIncome: 9_000_000 };

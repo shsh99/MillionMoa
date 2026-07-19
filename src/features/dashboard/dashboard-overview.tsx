@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CreditCard, Landmark, ListChecks, PiggyBank, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CreditCard, Landmark, ListChecks, PiggyBank, RotateCcw, Save, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
@@ -24,6 +24,8 @@ import {
 const goalAmount = 100_000_000;
 export const localFinanceScenarioOwner = "local-demo-profile";
 type DashboardCategory = "overview" | "input" | "calculators" | "products" | "insights";
+type MoneyWorkspace = "cash-flow" | "expenses" | "assets" | "loans";
+type SaveStatus = "saved" | "dirty" | "failed";
 
 export const initialFinanceScenario: FinanceScenarioInput = {
   assets: [
@@ -301,11 +303,101 @@ function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
 }
 
 function categoryFromHash(hash: string): DashboardCategory {
-  if (["#planner-cash-flow", "#expense-management", "#finance-accounts"].includes(hash)) return "input";
+  if (["#planner-cash-flow", "#expense-management", "#finance-accounts", "#finance-assets", "#finance-loans-input"].includes(hash)) return "input";
   if (hash === "#finance-calculators") return "calculators";
   if (hash === "#finance-products") return "products";
   if (hash === "#finance-loans") return "insights";
   return "overview";
+}
+
+function moneyWorkspaceFromHash(hash: string): MoneyWorkspace {
+  if (hash === "#expense-management") return "expenses";
+  if (hash === "#finance-accounts" || hash === "#finance-assets") return "assets";
+  if (hash === "#finance-loans-input") return "loans";
+  return "cash-flow";
+}
+
+const moneyWorkspaceItems: Array<{ id: MoneyWorkspace; label: string; detail: string; href: string; icon: ReactNode }> = [
+  { id: "cash-flow", label: "현금흐름", detail: "월급과 여유금", href: "#planner-cash-flow", icon: <ArrowDownToLine size={17} strokeWidth={1.9} /> },
+  { id: "expenses", label: "지출", detail: "고정비·생활비", href: "#expense-management", icon: <ListChecks size={17} strokeWidth={1.9} /> },
+  { id: "assets", label: "자산", detail: "통장·적금", href: "#finance-assets", icon: <Landmark size={17} strokeWidth={1.9} /> },
+  { id: "loans", label: "대출", detail: "원금·이자", href: "#finance-loans-input", icon: <Building2 size={17} strokeWidth={1.9} /> },
+];
+
+function MoneyWorkspaceNavigator({ activeWorkspace }: { activeWorkspace: MoneyWorkspace }) {
+  return (
+    <nav aria-label="입력 작업공간" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      {moneyWorkspaceItems.map((item) => (
+        <a
+          aria-current={activeWorkspace === item.id ? "location" : undefined}
+          className={`flex min-h-[4.25rem] min-w-0 items-center gap-3 rounded-[20px] border px-3 text-left transition-[background-color,border-color,transform] active:scale-[0.98] ${
+            activeWorkspace === item.id
+              ? "border-[var(--wallet-primary)] bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"
+              : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-muted)] hover:border-[var(--wallet-primary-soft)] hover:bg-[var(--wallet-surface-tint)]"
+          }`}
+          href={item.href}
+          key={item.id}
+        >
+          <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${activeWorkspace === item.id ? "bg-white" : "bg-[var(--wallet-surface-tint)]"}`}>{item.icon}</span>
+          <span className="min-w-0">
+            <span className="block text-sm font-extrabold">{item.label}</span>
+            <span className="mt-0.5 block truncate text-[11px] font-semibold">{item.detail}</span>
+          </span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function MoneyWorkspaceHeader({
+  activeWorkspace,
+  onSave,
+  onRetry,
+  savedAt,
+  saveStatus,
+}: {
+  activeWorkspace: MoneyWorkspace;
+  onSave: () => void;
+  onRetry: () => void;
+  savedAt: string | null;
+  saveStatus: SaveStatus;
+}) {
+  const item = moneyWorkspaceItems.find((entry) => entry.id === activeWorkspace) ?? moneyWorkspaceItems[0];
+  const statusLabel = saveStatus === "failed" ? "저장 실패" : saveStatus === "dirty" ? "저장 필요" : "저장됨";
+  const savedTime = savedAt ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(savedAt)) : null;
+
+  return (
+    <div className="sticky top-3 z-10 rounded-[24px] border border-[var(--wallet-line)] bg-white/95 px-4 py-3 shadow-[0_12px_28px_rgba(31,41,55,0.08)] backdrop-blur supports-[not(backdrop-filter:blur(1px))]:bg-white">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">입력 작업공간</p>
+          <h2 className="mt-0.5 text-xl font-extrabold text-[var(--wallet-ink)]">{item.label}</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            aria-label="저장 상태"
+            className={`inline-flex min-h-10 items-center rounded-full px-3 text-xs font-extrabold ${
+              saveStatus === "failed"
+                ? "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]"
+                : "bg-[var(--wallet-mint-soft)] text-[#14806d]"
+            }`}
+            data-testid="finance-save-status"
+            role="status"
+          >
+            {statusLabel}{savedTime ? ` · ${savedTime}` : ""}
+          </span>
+          {saveStatus === "failed" && (
+            <button aria-label="저장 재시도" className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-extrabold text-[var(--wallet-coral)] hover:bg-[var(--wallet-coral-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-coral)]" onClick={onRetry} type="button">
+              <RotateCcw aria-hidden="true" size={15} />재시도
+            </button>
+          )}
+          <button aria-label="현재 계획 저장" className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[var(--wallet-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_18px_rgba(79,91,213,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] focus-visible:ring-offset-2" onClick={onSave} type="button">
+            <Save aria-hidden="true" size={15} />저장
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCategory }) {
@@ -348,8 +440,11 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [input, setInput] = useState(initialFinanceScenario);
   const [hydrated, setHydrated] = useState(false);
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<DashboardCategory>("overview");
   const [activeHash, setActiveHash] = useState("");
+  const [activeMoneyWorkspace, setActiveMoneyWorkspace] = useState<MoneyWorkspace>("cash-flow");
   const [activeCalculator, setActiveCalculator] = useState<"salary" | "year-end">("salary");
   const inputRef = useRef(initialFinanceScenario);
   const calculatorTabRefs = useRef<{ salary: HTMLButtonElement | null; "year-end": HTMLButtonElement | null }>({ salary: null, "year-end": null });
@@ -374,6 +469,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     const syncCategory = () => {
       setActiveCategory(categoryFromHash(window.location.hash));
       setActiveHash(window.location.hash);
+      setActiveMoneyWorkspace(moneyWorkspaceFromHash(window.location.hash));
     };
 
     syncCategory();
@@ -414,18 +510,22 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     const loaded = loadFinanceScenario(window.localStorage, localFinanceScenarioOwner, initialFinanceScenario);
     inputRef.current = loaded.scenario;
     setInput(loaded.scenario);
+    setSavedAt(loaded.savedAt ?? null);
     if (accessFailed || (hadStoredValue && loaded.source === "fallback")) {
       setStorageNotice("저장된 계획을 불러오지 못해 기본값을 사용합니다.");
     }
     setHydrated(true);
   }, []);
 
-  const persistInput = (scenarioInput: FinanceScenarioInput) => {
+  const persistInput = (scenarioInput: FinanceScenarioInput, nextSavedAt?: string) => {
     try {
-      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, scenarioInput);
+      saveFinanceScenario(window.localStorage, localFinanceScenarioOwner, scenarioInput, nextSavedAt ? { savedAt: nextSavedAt } : {});
       setStorageNotice(null);
+      setSaveStatus("saved");
+      if (nextSavedAt) setSavedAt(nextSavedAt);
     } catch {
       setStorageNotice("변경 내용은 유지되지만 이 기기에 저장하지 못했습니다.");
+      setSaveStatus("failed");
     }
   };
   const updateInput = (updater: (current: FinanceScenarioInput) => FinanceScenarioInput) => {
@@ -438,6 +538,13 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
     inputRef.current = scenarioInput;
     setInput(scenarioInput);
     persistInput(scenarioInput);
+  };
+  const saveCurrentInput = () => {
+    const nextSavedAt = new Date().toISOString();
+    persistInput(inputRef.current, nextSavedAt);
+  };
+  const retryPersistInput = () => {
+    persistInput(inputRef.current, savedAt ?? undefined);
   };
   const calculationReferenceDate = useMemo(
     () => formatKoreanReferenceDate(referenceDate ?? new Date()),
@@ -496,36 +603,57 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
         )}
 
         {activeCategory === "input" && (
-          <>
-            <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-36 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
-              <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
-              {hydrated ? (
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
-                  <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} quickAmountMode="adjust" quickAmountsManwon={[10, 50, 100]} />
-                  <div className="flex min-h-28 flex-col justify-center border-t border-[var(--wallet-line)] py-4 sm:border-l sm:border-t-0 sm:pl-5">
-                    <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
-                    <p className="mt-2 text-2xl font-black tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
-                    <a className="mt-2 w-fit text-sm font-bold text-[var(--wallet-primary-strong)] underline-offset-4 hover:underline" href="#expense-management">세부 내역 관리</a>
-                    <div className="mt-4"><CashFlowMiniBars scenario={scenario} /></div>
+          <div className="grid gap-4">
+            <MoneyWorkspaceNavigator activeWorkspace={activeMoneyWorkspace} />
+            <MoneyWorkspaceHeader activeWorkspace={activeMoneyWorkspace} onRetry={retryPersistInput} onSave={saveCurrentInput} savedAt={savedAt} saveStatus={saveStatus} />
+
+            {activeMoneyWorkspace === "cash-flow" && (
+              <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-36 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
+                <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-extrabold text-[var(--wallet-ink)]">월 현금흐름</h2></div>
+                {hydrated ? (
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
+                    <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} quickAmountMode="adjust" quickAmountsManwon={[10, 50, 100]} />
+                    <div className="flex min-h-28 flex-col justify-center border-t border-[var(--wallet-line)] py-4 sm:border-l sm:border-t-0 sm:pl-5">
+                      <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
+                      <p className="mt-2 text-2xl font-extrabold tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
+                      <a className="mt-2 w-fit text-sm font-bold text-[var(--wallet-primary-strong)] underline-offset-4 hover:underline" href="#expense-management">세부 내역 관리</a>
+                      <div className="mt-4"><CashFlowMiniBars scenario={scenario} /></div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div aria-busy="true" className="min-h-36 border-t border-[var(--wallet-line)] pt-5 text-sm font-semibold text-[var(--wallet-muted)]" role="status">계획 불러오는 중</div>
-              )}
-            </section>
+                ) : (
+                  <div aria-busy="true" className="min-h-36 border-t border-[var(--wallet-line)] pt-5 text-sm font-semibold text-[var(--wallet-muted)]" role="status">계획 불러오는 중</div>
+                )}
+              </section>
+            )}
 
-            <div className="scroll-mt-36" id="expense-management">
-              {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => updateInput((current) => ({ ...current, expenses }))} /> : null}
-            </div>
+            {activeMoneyWorkspace === "expenses" && (
+              <div className="scroll-mt-36" id="expense-management">
+                {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => updateInput((current) => ({ ...current, expenses }))} /> : null}
+              </div>
+            )}
 
-            <div className="scroll-mt-36" id="finance-accounts">
-              {hydrated ? (
-                <FinanceScenarioEditor value={input} onChange={replaceInput} />
-              ) : (
-                <section aria-busy="true" aria-label="금융 계정 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
-              )}
-            </div>
-          </>
+            {activeMoneyWorkspace === "assets" && (
+              <section aria-labelledby="finance-assets-title" className="scroll-mt-36" id="finance-assets">
+                <h2 className="sr-only" id="finance-assets-title">자산 계좌</h2>
+                {hydrated ? (
+                  <FinanceScenarioEditor mode="assets" value={input} onChange={replaceInput} />
+                ) : (
+                  <section aria-busy="true" aria-label="자산 계좌 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
+                )}
+              </section>
+            )}
+
+            {activeMoneyWorkspace === "loans" && (
+              <section aria-labelledby="finance-loans-input-title" className="scroll-mt-36" id="finance-loans-input">
+                <h2 className="sr-only" id="finance-loans-input-title">대출 관리</h2>
+                {hydrated ? (
+                  <FinanceScenarioEditor mode="loans" value={input} onChange={replaceInput} />
+                ) : (
+                  <section aria-busy="true" aria-label="대출 관리 불러오는 중" className="min-h-44 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 text-sm font-semibold text-[var(--wallet-muted)] shadow-[var(--wallet-shadow)]">계획 불러오는 중</section>
+                )}
+              </section>
+            )}
+          </div>
         )}
 
         {activeCategory === "calculators" && (
