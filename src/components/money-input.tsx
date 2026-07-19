@@ -127,6 +127,7 @@ export function MoneyInput({
   showPreview = true,
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pastePrimaryRef = useRef<HTMLButtonElement>(null);
   const selectionRef = useRef<{
     startDigits: number;
     endDigits: number;
@@ -141,6 +142,8 @@ export function MoneyInput({
     ownEmittedValue?: number;
     acknowledged: boolean;
   } | null>(null);
+  const [pastedAmount, setPastedAmount] = useState<{ text: string; krw: number; manwon: number; baseValue: number } | null>(null);
+  const [pasteError, setPasteError] = useState<{ text: string; baseValue: number } | null>(null);
   const normalizedValue = normalizeKrw(value, allowNegative);
   const displayValue = formatManwon(normalizedValue);
   const draftMatchesValue = incompleteDraft && (incompleteDraft.acknowledged
@@ -164,6 +167,15 @@ export function MoneyInput({
       setIncompleteDraft(null);
     }
   }, [draftMatchesValue, incompleteDraft, normalizedValue]);
+
+  useEffect(() => {
+    if (pastedAmount && pastedAmount.baseValue !== normalizedValue) setPastedAmount(null);
+    if (pasteError && pasteError.baseValue !== normalizedValue) setPasteError(null);
+  }, [normalizedValue, pasteError, pastedAmount]);
+
+  useEffect(() => {
+    if (pastedAmount) pastePrimaryRef.current?.focus();
+  }, [pastedAmount]);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -201,9 +213,10 @@ export function MoneyInput({
 
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="block text-sm font-bold text-[var(--wallet-ink)]">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={id} className="block text-sm font-bold text-[var(--wallet-ink)]">{label}</label>
+        <span className="text-xs font-semibold text-[var(--wallet-muted)]">만원 단위 입력</span>
+      </div>
       <div className="flex min-h-11 items-center rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 shadow-sm focus-within:border-[var(--wallet-primary)] focus-within:ring-2 focus-within:ring-[var(--wallet-primary-soft)]">
         <input
           ref={inputRef}
@@ -212,10 +225,38 @@ export function MoneyInput({
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          aria-describedby={`${id}-unit${showPreview ? ` ${id}-preview` : ""}`}
+          aria-describedby={`${id}-unit${showPreview ? ` ${id}-preview` : ""}${pastedAmount ? ` ${id}-paste-choice` : ""}${pasteError ? ` ${id}-paste-error` : ""}`}
           className="min-h-11 min-w-0 flex-1 bg-transparent text-right text-base font-bold tabular-nums text-[var(--wallet-ink)] outline-none"
           value={renderedValue}
+          onPaste={(event) => {
+            const text = event.clipboardData.getData("text").trim();
+            const accountingNegative = text.startsWith("(") && text.endsWith(")");
+            const unwrappedText = accountingNegative ? text.slice(1, -1) : text;
+            const hasCurrencyMarker = /원|₩|￦|KRW/i.test(text);
+            const normalizedText = unwrappedText.replace(/,/g, "").replace(/\s/g, "").replace(/원|₩|￦|KRW/gi, "").trim();
+            if (!/^-?\d+(?:\.\d+)?$/.test(normalizedText)) {
+              if (/\d/.test(text)) {
+                event.preventDefault();
+                setPastedAmount(null);
+                setPasteError({ text, baseValue: normalizedValue });
+              }
+              return;
+            }
+            const digits = text.replace(/\D/g, "");
+            if (!digits || (digits.length < 5 && !text.includes(",") && !hasCurrencyMarker)) return;
+            const signedText = accountingNegative ? `-${normalizedText.replace(/^-/, "")}` : normalizedText;
+            const parsedWon = Number(signedText);
+            const boundedWon = Number.isFinite(parsedWon)
+              ? Math.max(-Number.MAX_SAFE_INTEGER, Math.min(Number.MAX_SAFE_INTEGER, parsedWon))
+              : parsedWon < 0 ? -Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+            const krw = normalizeKrw(boundedWon, allowNegative);
+            event.preventDefault();
+            setPasteError(null);
+            setPastedAmount({ text, krw, manwon: parseManwon(signedText, allowNegative), baseValue: normalizedValue });
+          }}
           onChange={(event) => {
+            setPastedAmount(null);
+            setPasteError(null);
             rememberSelection();
             if (event.target.value === "") {
               const emitsZero = normalizedValue !== 0;
@@ -277,6 +318,8 @@ export function MoneyInput({
           className="ml-2 flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-2xl text-[var(--wallet-muted)] hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
           onClick={() => {
             setIncompleteDraft(null);
+            setPastedAmount(null);
+            setPasteError(null);
             onChange(0);
           }}
         >
@@ -285,9 +328,19 @@ export function MoneyInput({
       </div>
       {showPreview && (
         <p id={`${id}-preview`} className="text-right text-sm font-semibold text-[var(--wallet-muted)]" aria-live="polite">
-          {formatKoreanMoney(normalizedValue)}
+          {new Intl.NumberFormat("ko-KR").format(normalizedValue)}원 · {formatKoreanMoney(normalizedValue)}
         </p>
       )}
+      {pastedAmount && (
+        <div className="rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] p-3">
+          <p className="text-sm font-semibold leading-5 text-[var(--wallet-ink)]" id={`${id}-paste-choice`} role="status">붙여넣은 {pastedAmount.text}의 단위를 선택해 주세요.</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button aria-label={`원 단위 ${new Intl.NumberFormat("ko-KR").format(pastedAmount.krw)}원으로 입력`} className="min-h-12 rounded-xl bg-[var(--wallet-primary)] px-2 py-1.5 text-xs font-bold text-white" onClick={() => { setIncompleteDraft(null); setPastedAmount(null); onChange(pastedAmount.krw); }} ref={pastePrimaryRef} type="button"><span className="block">원 단위</span><strong className="mt-0.5 block text-sm tabular-nums">{new Intl.NumberFormat("ko-KR").format(pastedAmount.krw)}원</strong></button>
+            <button aria-label={`만원 단위 ${new Intl.NumberFormat("ko-KR").format(pastedAmount.manwon)}원으로 입력`} className="min-h-12 rounded-xl border border-[var(--wallet-line)] bg-white px-2 py-1.5 text-xs font-bold text-[var(--wallet-muted)]" onClick={() => { setIncompleteDraft(null); setPastedAmount(null); onChange(pastedAmount.manwon); }} type="button"><span className="block">만원 단위</span><strong className="mt-0.5 block text-sm tabular-nums text-[var(--wallet-ink)]">{new Intl.NumberFormat("ko-KR").format(pastedAmount.manwon)}원</strong></button>
+          </div>
+        </div>
+      )}
+      {pasteError && <p className="rounded-xl bg-[var(--wallet-coral-soft)] px-3 py-2 text-sm font-semibold text-[#9a4f58]" id={`${id}-paste-error`} role="alert">붙여넣은 {pasteError.text} 형식을 확인해 주세요. 원 또는 만원 단위 숫자로 입력할 수 있습니다.</p>}
       <div className={`grid gap-2 ${quickAmountMode === "adjust" ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`} aria-label={`${label} 빠른 금액 입력`}>
         {validQuickAmounts.map((amount) => (
           quickAmountMode === "adjust" ? (
@@ -299,6 +352,8 @@ export function MoneyInput({
                 className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-surface-tint)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-muted)] hover:bg-[var(--wallet-coral-soft)] hover:text-[#9a4f58] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
                 onClick={() => {
                   setIncompleteDraft(null);
+                  setPastedAmount(null);
+                  setPasteError(null);
                   onChange(boundedQuickAddition(normalizedValue, -amount, allowNegative));
                 }}
               >
@@ -311,6 +366,8 @@ export function MoneyInput({
                 className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
                 onClick={() => {
                   setIncompleteDraft(null);
+                  setPastedAmount(null);
+                  setPasteError(null);
                   onChange(boundedQuickAddition(normalizedValue, amount, allowNegative));
                 }}
               >
@@ -325,6 +382,8 @@ export function MoneyInput({
               className="min-h-11 touch-manipulation rounded-2xl bg-[var(--wallet-primary-soft)] px-2 text-sm font-bold tabular-nums text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
               onClick={() => {
                 setIncompleteDraft(null);
+                setPastedAmount(null);
+                setPasteError(null);
                 onChange(quickAmountMode === "set" ? normalizeKrw(amount * 10_000, allowNegative) : boundedQuickAddition(normalizedValue, amount, allowNegative));
               }}
             >
