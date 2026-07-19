@@ -35,7 +35,7 @@ export type FinanceVisualizationsProps = {
   projection: FinanceProjectionPoint[];
 };
 
-export const walletChartColors = ["#5b5bd6", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#8d79d6"] as const;
+export const walletChartColors = ["#087a63", "#43a98c", "#cf6673", "#4f8494", "#ad7a2b", "#7a9b8e"] as const;
 const assetColors = walletChartColors;
 
 function formatKrw(value: number) {
@@ -80,9 +80,9 @@ function Panel({
 }) {
   const iconToneClass = {
     lilac: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
-    mint: "bg-[var(--wallet-mint-soft)] text-[#247a65]",
-    coral: "bg-[var(--wallet-coral-soft)] text-[#9a4f58]",
-    blue: "bg-[#e8f3fc] text-[#3f739d]",
+    mint: "bg-[var(--wallet-mint-soft)] text-[var(--wallet-primary-strong)]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]",
+    blue: "bg-[#eaf3f5] text-[#356c77]",
   }[tone];
 
   return (
@@ -95,8 +95,8 @@ function Panel({
           {icon}
         </span>
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-[#18202b]">{title}</h2>
-          <p className="mt-0.5 text-xs font-medium leading-5 text-[#697587]">{description}</p>
+          <h2 className="text-base font-extrabold text-[var(--wallet-ink)]">{title}</h2>
+          <p className="mt-0.5 text-xs font-medium leading-5 text-[var(--wallet-muted)]">{description}</p>
         </div>
       </header>
       {children}
@@ -107,8 +107,8 @@ function Panel({
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name?: string; value?: number; color?: string }>; label?: string | number }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-[#dfe5ec] bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-      {label !== undefined ? <p className="mb-1 text-xs font-semibold text-[#697587]">{label}</p> : null}
+    <div className="rounded-xl border border-[var(--wallet-line)] bg-white/95 px-3 py-2 shadow-[var(--wallet-shadow)] backdrop-blur-sm">
+      {label !== undefined ? <p className="mb-1 text-xs font-semibold text-[var(--wallet-muted)]">{label}</p> : null}
       {payload.map((item) => (
         <p key={item.name} className="text-xs font-semibold tabular-nums" style={{ color: item.color }}>
           {item.name} {formatKrw(item.value ?? 0)}
@@ -136,17 +136,17 @@ function InsightTile({
   tone: "mint" | "blue" | "coral" | "lilac";
 }) {
   const toneClass = {
-    mint: "bg-[#f3fffa] text-[#087a63] ring-[#cdece2]",
-    blue: "bg-[#f6fbff] text-[#3f739d] ring-[#d8e8f6]",
-    coral: "bg-[#fff8f8] text-[#9a4f58] ring-[#f2d5d8]",
-    lilac: "bg-[#fbfaff] text-[var(--wallet-primary-strong)] ring-[#ded7f6]",
+    mint: "text-[var(--wallet-primary-strong)]",
+    blue: "text-[#356c77]",
+    coral: "text-[var(--wallet-coral)]",
+    lilac: "text-[var(--wallet-primary-strong)]",
   }[tone];
 
   return (
-    <div className={`min-w-0 rounded-[20px] px-4 py-3 ring-1 ${toneClass}`}>
+    <div className={`min-w-0 px-4 py-4 ${toneClass}`}>
       <p className="text-xs font-extrabold opacity-80">{label}</p>
-      <p className="mt-1 break-words text-lg font-black tabular-nums [overflow-wrap:anywhere]">{value}</p>
-      <p className="mt-1 text-xs font-semibold leading-5 text-[var(--wallet-muted)]">{detail}</p>
+      <p className="mt-1 break-words text-lg font-extrabold tabular-nums [overflow-wrap:anywhere]">{value}</p>
+      <p className="mt-1 text-xs font-medium leading-5 text-[var(--wallet-muted)]">{detail}</p>
     </div>
   );
 }
@@ -162,7 +162,7 @@ function ProjectionSummary({ scenario, projection }: { scenario: ScenarioResult;
     : scenario.totalLiabilities > 0 ? 100 : 0;
 
   return (
-    <section aria-label="그래프 핵심 요약" className="grid gap-3 rounded-[24px] border border-[var(--wallet-line)] bg-white p-3 shadow-[var(--wallet-shadow)] sm:grid-cols-3">
+    <section aria-label="그래프 핵심 요약" className="grid divide-y divide-[var(--wallet-line)] overflow-hidden rounded-[24px] border border-[var(--wallet-line)] bg-white shadow-[var(--wallet-shadow)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       <InsightTile
         label={scenario.rawMonthlySurplus < 0 ? "이번 달 위험" : "이번 달 여유"}
         value={formatManwon(scenario.rawMonthlySurplus, true)}
@@ -222,29 +222,23 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         className="lg:col-span-2"
         tone="lilac"
       >
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2">
-          <p className={`text-sm font-black tabular-nums ${scenario.netWorth < 0 ? "text-[#b45309]" : "text-[#087a63]"}`}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--wallet-line)] pb-3">
+          <p className={`text-sm font-extrabold tabular-nums ${scenario.netWorth < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-primary-strong)]"}`}>
             현재 순자산 {formatManwon(scenario.netWorth)}
           </p>
-          <p className="text-xs font-bold text-[#7b8797]">부채 반영선이 실제 목표 판단 기준입니다.</p>
+          <p className="text-xs font-medium text-[var(--wallet-muted)]">부채 반영선이 실제 목표 판단 기준입니다.</p>
         </div>
         <div role="img" aria-label="향후 10년 순자산과 부채 반영 순자산 추이" className="h-64 min-h-64 w-full sm:h-72 sm:min-h-72">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={projection} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
-              <defs>
-                <linearGradient id="debtAdjustedLine" x1="0" x2="1" y1="0" y2="0">
-                  <stop offset="0%" stopColor="#5b5bd6" />
-                  <stop offset="100%" stopColor="#49bfa0" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="#edf0f4" strokeDasharray="3 5" vertical={false} />
-              <XAxis dataKey="month" tickFormatter={(month) => `${month / 12}년`} tick={{ fill: "#7b8797", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={axisMoney} tick={{ fill: "#7b8797", fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
-              <ReferenceLine y={0} stroke="#9aa5b4" strokeWidth={1.25} />
+              <CartesianGrid stroke="#e7eeeb" strokeDasharray="3 5" vertical={false} />
+              <XAxis dataKey="month" tickFormatter={(month) => `${month / 12}년`} tick={{ fill: "#64716c", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={axisMoney} tick={{ fill: "#64716c", fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
+              <ReferenceLine y={0} stroke="#9caaa5" strokeWidth={1.25} />
               <Tooltip content={<ChartTooltip />} />
-              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 12, color: "#526072" }} />
-              <Line type="monotone" dataKey="baseline" name="대출 제외 자산" stroke="#49bfa0" strokeWidth={2.75} dot={false} activeDot={{ r: 4 }} />
-              <Line type="monotone" dataKey="debtAdjusted" name="부채 반영 순자산" stroke="url(#debtAdjustedLine)" strokeWidth={3.25} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
+              <Legend iconType="line" iconSize={12} wrapperStyle={{ fontSize: 12, color: "#64716c" }} />
+              <Line type="monotone" dataKey="baseline" name="대출 제외 자산" stroke="#8ab8ab" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="debtAdjusted" name="부채 반영 순자산" stroke="#087a63" strokeWidth={3.25} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -272,11 +266,11 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
             <ul aria-label="계좌별 자산 비중" className="grid gap-2.5">
               {composition.map((item, index) => (
                 <li key={item.id} className="flex min-w-0 items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2 font-semibold text-[#344154]">
+              <span className="flex min-w-0 items-center gap-2 font-semibold text-[var(--wallet-ink)]">
                     <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: assetColors[index % assetColors.length] }} />
                     <span className="truncate">{item.name}</span>
                   </span>
-                  <span className="shrink-0 text-xs font-semibold text-[#697587] tabular-nums">{formatManwon(item.value)} · {item.percent}%</span>
+                  <span className="shrink-0 text-xs font-semibold text-[var(--wallet-muted)] tabular-nums">{formatManwon(item.value)} · {item.percent}%</span>
                 </li>
               ))}
             </ul>
@@ -289,10 +283,10 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
       <Panel icon={<WalletCards size={19} strokeWidth={1.8} />} title="이번 달 현금흐름" description="수입은 위로, 지출과 납입은 아래로" tone="blue">
         <ul aria-label="월급 흐름 단계" className="mb-3 grid gap-2 sm:grid-cols-2">
           {flowItems.map((item) => (
-            <li key={item.label} className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2 text-xs font-extrabold text-[#526072]">
+            <li key={item.label} className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2 text-xs font-extrabold text-[var(--wallet-muted)]">
               <span className="block">{item.label}</span>
               <span className={`mt-1 block text-sm tabular-nums ${
-                item.tone === "mint" ? "text-[#087a63]" : item.tone === "amber" ? "text-[#a56a16]" : "text-[#9a4f58]"
+                item.tone === "mint" ? "text-[var(--wallet-primary-strong)]" : item.tone === "amber" ? "text-[var(--wallet-warning)]" : "text-[var(--wallet-coral)]"
               }`}>{formatManwon(item.value, true)}</span>
             </li>
           ))}
@@ -300,13 +294,13 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
         <div role="img" aria-label="이번 달 수입과 지출 및 대출 납입 비교" className="h-52 min-h-52 w-full">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={cashFlow} margin={{ top: 8, right: 4, bottom: 0, left: -16 }}>
-              <CartesianGrid stroke="#edf0f4" strokeDasharray="3 5" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: "#697587", fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={axisMoney} tick={{ fill: "#7b8797", fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
-              <ReferenceLine y={0} stroke="#9aa5b4" strokeWidth={1.25} />
+              <CartesianGrid stroke="#e7eeeb" strokeDasharray="3 5" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: "#64716c", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={axisMoney} tick={{ fill: "#64716c", fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
+              <ReferenceLine y={0} stroke="#9caaa5" strokeWidth={1.25} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="value" name="금액" radius={[6, 6, 6, 6]} maxBarSize={38}>
-                {cashFlow.map((item) => <Cell key={item.name} fill={item.value >= 0 ? "#49bfa0" : "#e89aa0"} />)}
+                {cashFlow.map((item) => <Cell key={item.name} fill={item.value >= 0 ? "#087a63" : "#cf6673"} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -316,7 +310,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
       <Panel icon={<Landmark size={19} strokeWidth={1.8} />} title="대출 상환 현황" description="첫 달 예상 납입액 기준" className="lg:col-span-2" tone="coral">
         {loans.length > 0 ? (
           <div className="grid gap-3">
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid divide-y divide-[var(--wallet-line)] overflow-hidden rounded-[18px] border border-[var(--wallet-line)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <InsightTile label="등록 부채" value={formatManwon(scenario.totalLiabilities)} detail={`${loans.length}개 대출 포함`} tone="coral" />
               <InsightTile label="월 납입" value={formatManwon(scenario.totalLoanPayment)} detail="이번 달 현금흐름에서 차감" tone="blue" />
               <InsightTile label="남은 이자" value={formatManwon(totalLoanInterest)} detail="현재 조건으로 갚을 때 예상" tone="lilac" />
@@ -358,7 +352,7 @@ export function FinanceVisualizations({ assets, loans, scenario, projection }: F
                     return (
                       <tr key={loan.id} className="text-[#344154]">
                         <th className="px-4 py-3.5 font-bold text-[#18202b]" scope="row">{loan.name}</th>
-                        <td className="px-4 py-3.5"><span className="rounded-lg bg-[#eef0ff] px-2 py-1 text-xs font-semibold text-[#4f46a5]">{repaymentLabels[loan.repaymentMethod]}</span></td>
+                        <td className="px-4 py-3.5"><span className="rounded-lg bg-[var(--wallet-primary-soft)] px-2 py-1 text-xs font-semibold text-[var(--wallet-primary-strong)]">{repaymentLabels[loan.repaymentMethod]}</span></td>
                         <td className="px-4 py-3.5 text-right font-semibold tabular-nums">{formatManwon(summary?.firstMonthlyPayment ?? 0)}</td>
                         <td className="px-4 py-3.5 text-right font-semibold tabular-nums">{formatManwon(loan.principal)}</td>
                         <td className="px-4 py-3.5 text-right tabular-nums">{loan.remainingMonths}개월</td>

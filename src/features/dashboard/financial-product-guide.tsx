@@ -110,7 +110,7 @@ export function FinancialProductGuide() {
   const isaLowIncomeTaxSaving = isaProfitAssumption * 0.154;
 
   return (
-    <section aria-labelledby="financial-products-title" className="scroll-mt-20 rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="finance-products">
+    <section aria-labelledby="financial-products-title" className="scroll-mt-36 rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="finance-products">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-black text-[var(--wallet-primary-strong)]">상품 혜택 기준</p>

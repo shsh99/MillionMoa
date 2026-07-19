@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, Calculator, ChartNoAxesCombined, Landmark, ListChecks, PiggyBank, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
@@ -162,36 +162,36 @@ function buildStarterActions(scenario: ReturnType<typeof calculateFinanceScenari
 function StarterChecklist({ scenario }: { scenario: ReturnType<typeof calculateFinanceScenario> }) {
   const starter = buildStarterActions(scenario);
   const statusToneClass = {
-    mint: "bg-[#e4f8f1] text-[#087a63]",
-    blue: "bg-[#e8f3fc] text-[#3f739d]",
+    mint: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    blue: "bg-[#eaf3f5] text-[#356c77]",
     lilac: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
-    coral: "bg-[var(--wallet-coral-soft)] text-[#9a4f58]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]",
   }[starter.status.tone];
   const actionToneClass = {
-    mint: "border-[#cdece2] bg-[#f7fffb] text-[#087a63]",
-    blue: "border-[#d8e8f6] bg-[#f7fbff] text-[#3f739d]",
-    lilac: "border-[#ded7f6] bg-[#fbfaff] text-[var(--wallet-primary-strong)]",
-    coral: "border-[#f2d5d8] bg-[#fff8f8] text-[#9a4f58]",
+    mint: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    blue: "bg-[#eaf3f5] text-[#356c77]",
+    lilac: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]",
   };
 
   return (
-    <section aria-label="사회초년생 시작 체크" className="rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5">
+    <section aria-label="사회초년생 시작 체크" className="rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusToneClass}`}>{starter.status.label}</p>
-          <h2 className="mt-2 text-lg font-black text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
-          <p className="mt-1 text-sm font-semibold leading-5 text-[var(--wallet-muted)]">{starter.status.headline} · {starter.status.detail}</p>
+          <h2 className="mt-3 text-lg font-extrabold text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
+          <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[var(--wallet-muted)]">{starter.status.headline}. {starter.status.detail}</p>
         </div>
         <dl className="grid shrink-0 grid-cols-2 gap-2 text-xs font-bold text-[var(--wallet-muted)] sm:w-56">
-          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2"><dt>지출 비중</dt><dd className="mt-1 text-[var(--wallet-ink)]">{Math.round(starter.expenseRatio * 100)}%</dd></div>
-          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2"><dt>비상금</dt><dd className="mt-1 text-[var(--wallet-ink)]">{starter.emergencyMonths.toFixed(1)}개월</dd></div>
+          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2.5"><dt>지출 비중</dt><dd className="mt-1 text-sm font-extrabold text-[var(--wallet-ink)]">{Math.round(starter.expenseRatio * 100)}%</dd></div>
+          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2.5"><dt>비상금</dt><dd className="mt-1 text-sm font-extrabold text-[var(--wallet-ink)]">{starter.emergencyMonths.toFixed(1)}개월</dd></div>
         </dl>
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid border-t border-[var(--wallet-line)] sm:grid-cols-2 lg:grid-cols-4">
         {starter.actions.map((action) => (
-          <a key={action.label} href={action.href} className={`group min-h-24 rounded-2xl border p-3 transition-transform active:scale-[0.99] ${actionToneClass[action.tone]}`}>
-            <span className="flex items-center gap-2 text-sm font-black">{action.icon}{action.label}</span>
-            <span className="mt-2 block text-xs font-semibold leading-5 text-[var(--wallet-muted)]">{action.detail}</span>
+          <a key={action.label} href={action.href} className="group flex min-h-20 items-start gap-3 border-b border-[var(--wallet-line)] py-3.5 transition-colors hover:bg-[var(--wallet-surface-tint)] active:bg-[var(--wallet-primary-soft)] sm:px-3 lg:border-b-0">
+            <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${actionToneClass[action.tone]}`}>{action.icon}</span>
+            <span className="min-w-0"><strong className="block text-sm font-extrabold text-[var(--wallet-ink)]">{action.label}</strong><span className="mt-1 block text-xs font-medium leading-5 text-[var(--wallet-muted)]">{action.detail}</span></span>
           </a>
         ))}
       </div>
@@ -202,9 +202,9 @@ function StarterChecklist({ scenario }: { scenario: ReturnType<typeof calculateF
 function CashFlowMiniBars({ scenario }: { scenario: ReturnType<typeof calculateFinanceScenario> }) {
   const monthlyIncome = Math.max(1, scenario.monthlyIncome);
   const rows = [
-    { label: "생활 지출", value: scenario.monthlyNonLoanExpense, color: "#e89aa0" },
-    { label: "대출 납입", value: scenario.totalLoanPayment, color: "#d7a44e" },
-    { label: "남는 돈", value: Math.max(0, scenario.rawMonthlySurplus), color: "#49bfa0" },
+    { label: "생활 지출", value: scenario.monthlyNonLoanExpense, color: "var(--wallet-coral)" },
+    { label: "대출 납입", value: scenario.totalLoanPayment, color: "var(--wallet-warning)" },
+    { label: "남는 돈", value: Math.max(0, scenario.rawMonthlySurplus), color: "var(--wallet-primary)" },
   ];
 
   return (
@@ -242,23 +242,23 @@ function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCatego
   ];
 
   return (
-    <nav aria-label="대시보드 카테고리" className="sticky top-0 z-20 -mx-4 overflow-x-auto border-y border-[var(--wallet-line)] bg-[var(--wallet-page)]/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:rounded-[22px] sm:border sm:bg-white sm:p-2 sm:shadow-[var(--wallet-shadow)]">
-      <div className="flex min-w-max gap-2 sm:grid sm:min-w-0 sm:grid-cols-5">
+    <nav aria-label="대시보드 카테고리" className="sticky top-[60px] z-20 -mx-4 border-y border-[var(--wallet-line)] bg-[var(--wallet-page)]/94 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-[20px] sm:border sm:bg-[var(--wallet-surface)] sm:p-1.5 sm:shadow-[var(--wallet-shadow)]">
+      <div className="grid grid-cols-5 gap-1">
         {items.map((item) => (
           <a
             key={item.href}
             href={item.href}
             aria-current={activeCategory === item.category ? "location" : undefined}
-            className={`flex min-h-14 min-w-28 items-center gap-2 rounded-2xl px-3 text-sm font-black ring-1 transition-transform active:scale-[0.99] sm:min-w-0 ${
+            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 text-xs font-extrabold transition-[background-color,color,transform] active:scale-[0.98] sm:flex-row sm:justify-start sm:gap-2 sm:px-3 sm:text-sm ${
               activeCategory === item.category
-                ? "bg-[var(--wallet-primary)] text-white ring-[var(--wallet-primary)]"
-                : "bg-white text-[var(--wallet-ink)] ring-[var(--wallet-line)] sm:bg-[var(--wallet-surface-tint)]"
+                ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"
+                : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)] hover:text-[var(--wallet-ink)]"
             }`}
           >
-            <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-xl ${activeCategory === item.category ? "bg-white/20 text-white" : "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"}`}>{item.icon}</span>
+            <span aria-hidden="true" className={`grid size-7 shrink-0 place-items-center rounded-xl ${activeCategory === item.category ? "bg-[var(--wallet-surface)]" : ""}`}>{item.icon}</span>
             <span className="min-w-0">
               <span className="block">{item.label}</span>
-              <span className={`block truncate text-[11px] font-bold ${activeCategory === item.category ? "text-white/80" : "text-[var(--wallet-muted)]"}`}>{item.detail}</span>
+              <span className="hidden truncate text-[11px] font-medium text-[var(--wallet-muted)] sm:block">{item.detail}</span>
             </span>
           </a>
         ))}
@@ -272,10 +272,32 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [hydrated, setHydrated] = useState(false);
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<DashboardCategory>("overview");
+  const [activeHash, setActiveHash] = useState("");
+  const [activeCalculator, setActiveCalculator] = useState<"salary" | "year-end">("salary");
   const inputRef = useRef(initialFinanceScenario);
+  const calculatorTabRefs = useRef<{ salary: HTMLButtonElement | null; "year-end": HTMLButtonElement | null }>({ salary: null, "year-end": null });
+
+  const activateCalculatorTab = (next: "salary" | "year-end") => {
+    setActiveCalculator(next);
+    window.requestAnimationFrame(() => calculatorTabRefs.current[next]?.focus());
+  };
+
+  const handleCalculatorTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: "salary" | "year-end") => {
+    let next: "salary" | "year-end" | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = current === "salary" ? "year-end" : "salary";
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = current === "salary" ? "year-end" : "salary";
+    if (event.key === "Home") next = "salary";
+    if (event.key === "End") next = "year-end";
+    if (!next) return;
+    event.preventDefault();
+    activateCalculatorTab(next);
+  };
 
   useEffect(() => {
-    const syncCategory = () => setActiveCategory(categoryFromHash(window.location.hash));
+    const syncCategory = () => {
+      setActiveCategory(categoryFromHash(window.location.hash));
+      setActiveHash(window.location.hash);
+    };
 
     syncCategory();
     window.addEventListener("hashchange", syncCategory);
@@ -291,14 +313,18 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
       if (!target) return;
 
       target.scrollIntoView?.({ block: "start" });
-      if (target instanceof HTMLElement) {
-        target.tabIndex = -1;
-        target.focus({ preventScroll: true });
+      const focusTarget = target.matches("h1, h2, h3")
+        ? target
+        : target.querySelector("h1, h2, h3");
+      if (focusTarget instanceof HTMLElement) {
+        focusTarget.tabIndex = -1;
+        focusTarget.classList.add("dashboard-focus-target");
+        focusTarget.focus({ preventScroll: true });
       }
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeCategory]);
+  }, [activeCategory, activeHash]);
 
   useEffect(() => {
     let hadStoredValue = false;
@@ -350,8 +376,8 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   return (
     <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
       <header className="mb-5 flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-sm font-semibold text-[var(--wallet-muted)]">김기은님의 머니 플랜</p><h1 id="dashboard-overview-title" className="mt-1 break-keep text-xl font-black text-[var(--wallet-ink)] sm:text-2xl">1억을 향한 자산 지도</h1></div>
-        <span className="shrink-0 rounded-2xl bg-[var(--wallet-mint-soft)] px-3 py-2 text-xs font-bold text-[#247a65]">실시간 시나리오</span>
+        <div className="min-w-0"><p className="text-sm font-medium text-[var(--wallet-muted)]">김기은님의 머니 플랜</p><h1 id="dashboard-overview-title" className="mt-1 break-keep text-xl font-extrabold text-[var(--wallet-ink)] sm:text-2xl">1억을 향한 자산 지도</h1></div>
+        <span className="shrink-0 rounded-full bg-[var(--wallet-primary-soft)] px-3 py-2 text-xs font-bold text-[var(--wallet-primary-strong)]">오늘 기준</span>
       </header>
 
       {storageNotice && <p role="status" className="mb-4 rounded-2xl bg-[var(--wallet-coral-soft)] px-4 py-3 text-sm font-semibold text-[#9a4f58]">{storageNotice}</p>}
@@ -361,17 +387,17 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
 
         {activeCategory === "overview" && (
           <>
-            <section aria-label="자산 요약" className="overflow-hidden rounded-[24px] border border-[#d8cff8] bg-[#4f46a5] text-white shadow-[var(--wallet-shadow)]">
+            <section aria-label="자산 요약" className="overflow-hidden rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-ink)] shadow-[var(--wallet-shadow)]">
               <div className="p-5 sm:p-7">
-                <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[#eee9ff]">현재 순자산</p><span className="grid size-10 place-items-center rounded-2xl bg-white/15"><Target aria-hidden="true" className="text-[#b9f0df]" size={22} /></span></div>
-                <p aria-live="polite" className={`mt-2 break-words text-[2.1rem] font-black leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[#ffd1d4]" : "text-white"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold text-[#eee9ff]">
-                  <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">보유 자산</span><strong className="mt-1 block text-white">{formatShortMoney(scenario.totalAssetBalances)}</strong></div>
-                  <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">등록 부채</span><strong className="mt-1 block text-white">{formatShortMoney(scenario.totalLiabilities)}</strong></div>
-                  <div className="rounded-2xl bg-white/10 px-3 py-2"><span className="block">월 여유</span><strong className={`mt-1 block ${scenario.rawMonthlySurplus < 0 ? "text-[#ffd1d4]" : "text-[#b9f0df]"}`}>{formatShortMoney(scenario.rawMonthlySurplus)}</strong></div>
+                <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[var(--wallet-muted)]">현재 순자산</p><span className="grid size-10 place-items-center rounded-2xl bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"><Target aria-hidden="true" size={21} /></span></div>
+                <p aria-live="polite" className={`mt-2 break-words text-[2.25rem] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-ink)]"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
+                <div className="mt-5 grid grid-cols-3 divide-x divide-[var(--wallet-line)] border-y border-[var(--wallet-line)] py-3 text-xs font-semibold text-[var(--wallet-muted)]">
+                  <div className="min-w-0 px-2 first:pl-0 sm:px-4"><span className="block">보유 자산</span><strong className="mt-1 block break-words text-sm font-extrabold text-[var(--wallet-ink)]">{formatShortMoney(scenario.totalAssetBalances)}</strong></div>
+                  <div className="min-w-0 px-2 sm:px-4"><span className="block">등록 부채</span><strong className="mt-1 block break-words text-sm font-extrabold text-[var(--wallet-coral)]">{formatShortMoney(scenario.totalLiabilities)}</strong></div>
+                  <div className="min-w-0 px-2 last:pr-0 sm:px-4"><span className="block">월 여유</span><strong className={`mt-1 block break-words text-sm font-extrabold ${scenario.rawMonthlySurplus < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-primary-strong)]"}`}>{formatShortMoney(scenario.rawMonthlySurplus)}</strong></div>
                 </div>
-                <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[#49bfa0] transition-[width]" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
-                <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold text-[#eee9ff]">{isNetWorthNegative ? "부채 초과" : "남은 목표"} <strong className="ml-1 text-white">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-semibold text-[#eee9ff]">예상 <strong className="ml-1 text-[#b9f0df]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
+                <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--wallet-line)]" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[var(--wallet-primary)] transition-[width] motion-reduce:transition-none" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
+                <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-medium text-[var(--wallet-muted)]">{isNetWorthNegative ? "부채 초과" : "남은 목표"} <strong className="ml-1 font-extrabold text-[var(--wallet-ink)]">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-medium text-[var(--wallet-muted)]">예상 <strong className="ml-1 font-extrabold text-[var(--wallet-primary-strong)]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
               </div>
               <dl className="grid grid-cols-2 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] sm:grid-cols-4 sm:divide-x sm:divide-[var(--wallet-line)]">
                 <Metric icon={<ArrowDownToLine size={16} />} label="월 수입" value={scenario.monthlyIncome} />
@@ -389,7 +415,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
 
         {activeCategory === "input" && (
           <>
-            <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-20 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
+            <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-36 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">
               <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-black text-[var(--wallet-ink)]">월 현금흐름</h2></div>
               {hydrated ? (
                 <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
@@ -406,11 +432,11 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
               )}
             </section>
 
-            <div className="scroll-mt-20" id="expense-management">
+            <div className="scroll-mt-36" id="expense-management">
               {hydrated ? <ExpenseManagementEditor value={input.expenses} onChange={(expenses) => updateInput((current) => ({ ...current, expenses }))} /> : null}
             </div>
 
-            <div className="scroll-mt-20" id="finance-accounts">
+            <div className="scroll-mt-36" id="finance-accounts">
               {hydrated ? (
                 <FinanceScenarioEditor value={input} onChange={replaceInput} />
               ) : (
@@ -421,8 +447,17 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
         )}
 
         {activeCategory === "calculators" && (
-          <div className="scroll-mt-20" id="finance-calculators">
-            {hydrated ? <div className="grid gap-4"><NetSalaryCalculator currentMonthlyIncome={input.monthlyIncome} onApply={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} /><YearEndTaxCalculator currentMonthlySurplus={scenario.rawMonthlySurplus} /></div> : null}
+          <div className="scroll-mt-36" id="finance-calculators">
+            {hydrated ? (
+              <div className="grid gap-4">
+                <div aria-label="계산기 선택" className="grid grid-cols-2 gap-1 rounded-[18px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-1.5 shadow-[var(--wallet-shadow)]" role="tablist">
+                  <button aria-controls="salary-calculator-panel" aria-selected={activeCalculator === "salary"} className={`min-h-12 rounded-[14px] px-3 text-sm font-extrabold transition-colors ${activeCalculator === "salary" ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]" : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)]"}`} id="salary-calculator-tab" onClick={() => setActiveCalculator("salary")} onKeyDown={(event) => handleCalculatorTabKeyDown(event, "salary")} ref={(node) => { calculatorTabRefs.current.salary = node; }} role="tab" tabIndex={activeCalculator === "salary" ? 0 : -1} type="button">실수령액</button>
+                  <button aria-controls="year-end-calculator-panel" aria-selected={activeCalculator === "year-end"} className={`min-h-12 rounded-[14px] px-3 text-sm font-extrabold transition-colors ${activeCalculator === "year-end" ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]" : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)]"}`} id="year-end-calculator-tab" onClick={() => setActiveCalculator("year-end")} onKeyDown={(event) => handleCalculatorTabKeyDown(event, "year-end")} ref={(node) => { calculatorTabRefs.current["year-end"] = node; }} role="tab" tabIndex={activeCalculator === "year-end" ? 0 : -1} type="button">연말정산</button>
+                </div>
+                <div aria-labelledby="salary-calculator-tab" hidden={activeCalculator !== "salary"} id="salary-calculator-panel" role="tabpanel"><NetSalaryCalculator currentMonthlyIncome={input.monthlyIncome} onApply={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} /></div>
+                <div aria-labelledby="year-end-calculator-tab" hidden={activeCalculator !== "year-end"} id="year-end-calculator-panel" role="tabpanel"><YearEndTaxCalculator currentMonthlySurplus={scenario.rawMonthlySurplus} /></div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -430,7 +465,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
 
         {activeCategory === "insights" && (
           <>
-            <div className="scroll-mt-20" id="finance-loans">
+            <div className="scroll-mt-36" id="finance-loans">
               <FinanceVisualizations assets={input.assets} loans={input.loans} scenario={scenario} projection={projection} />
             </div>
 

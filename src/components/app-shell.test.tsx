@@ -21,12 +21,12 @@ describe("AppShell", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
 
     const shell = screen.getByRole("main").parentElement;
-    expect(shell).toHaveClass("pb-[calc(4rem+env(safe-area-inset-bottom))]");
+    expect(shell).toHaveClass("pb-[calc(5.5rem+env(safe-area-inset-bottom))]");
 
     const header = screen.getByRole("link", { name: /MillionMoa/ }).closest("header")!;
     expect(header.firstElementChild).toHaveClass("h-[60px]");
     expect(screen.getByTestId("brand-mark")).toHaveClass(
-      "rounded-full",
+      "rounded-xl",
       "bg-[var(--wallet-primary-soft)]",
       "text-[var(--wallet-primary-strong)]",
     );
@@ -46,15 +46,21 @@ describe("AppShell", () => {
     );
 
     const mobileNav = screen.getByRole("navigation", { name: "모바일 주요 메뉴" });
-    expect(mobileNav).toHaveClass("pb-[env(safe-area-inset-bottom)]");
+    expect(mobileNav).toHaveClass(
+      "inset-x-3",
+      "bottom-3",
+      "rounded-[22px]",
+      "pb-[env(safe-area-inset-bottom)]",
+    );
     const expectedItems = [
       ["홈", "/"],
       ["입력", "#planner-cash-flow"],
       ["계산", "#finance-calculators"],
+      ["상품", "#finance-products"],
       ["그래프", "#finance-loans"],
     ] as const;
 
-    expect(new Set(expectedItems.map(([, href]) => href)).size).toBe(4);
+    expect(new Set(expectedItems.map(([, href]) => href)).size).toBe(5);
 
     for (const [label, href] of expectedItems) {
       const link = within(mobileNav).getByRole("link", { name: label });
@@ -62,6 +68,19 @@ describe("AppShell", () => {
       expect(link.querySelector("svg")).toBeInTheDocument();
     }
 
+    expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveClass(
+      "bg-[var(--wallet-primary-soft)]",
+      "text-[var(--wallet-primary-strong)]",
+    );
+
+    act(() => {
+      window.history.replaceState(null, "", "#dashboard-overview-title");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
     expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveAttribute(
       "aria-current",
       "page",
