@@ -50,7 +50,7 @@ function renderVisualizations() {
 
 describe("FinanceVisualizations", () => {
   it("uses the selected wallet chart palette", () => {
-    expect(walletChartColors).toEqual(["#5b5bd6", "#49bfa0", "#e89aa0", "#6fa9d8", "#d7a44e", "#8d79d6"]);
+    expect(walletChartColors).toEqual(["#087a63", "#43a98c", "#cf6673", "#4f8494", "#ad7a2b", "#7a9b8e"]);
   });
 
   it("gives each visualization icon a semantic pastel tone", () => {
@@ -67,6 +67,11 @@ describe("FinanceVisualizations", () => {
 
     expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "그래프 핵심 요약" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "그래프 핵심 요약" })).toHaveClass(
+      "divide-y",
+      "sm:divide-x",
+      "sm:divide-y-0",
+    );
     expect(screen.getByText("현재 순자산 -600만원")).toBeInTheDocument();
     expect(screen.getByText("부채 반영선이 실제 목표 판단 기준입니다.")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "이번 달 수입과 지출 및 대출 납입 비교" })).toBeInTheDocument();

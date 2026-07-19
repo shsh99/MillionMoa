@@ -146,7 +146,7 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
   const maxDeduction = Math.max(...deductionRows.map(([, value]) => value), 1);
 
   return (
-    <section aria-labelledby="net-salary-title" className="overflow-hidden rounded-[24px] border border-[#ded7f6] bg-[var(--wallet-surface)] shadow-[var(--wallet-shadow)]">
+    <section aria-labelledby="net-salary-title" className="overflow-hidden rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] shadow-[var(--wallet-shadow)]">
       <div className="bg-[var(--wallet-primary-soft)] px-5 py-5 sm:px-6">
         <div className="flex items-start justify-between gap-3">
           <div><p className="text-xs font-extrabold text-[var(--wallet-primary-strong)]">2026 급여 도구</p><h2 id="net-salary-title" className="mt-1 text-xl font-black text-[var(--wallet-ink)]">내 월급 실수령액</h2><p className="mt-1 text-sm font-semibold text-[var(--wallet-muted)]">급여명세서와 맞춰 보고 계획에 바로 연결해요.</p></div>
@@ -234,16 +234,16 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
           </details>
         </div>
 
-        <aside className="rounded-[22px] bg-[#2f2950] p-5 text-white">
-          <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-[#d9d2f8]">예상 월 실수령액</p><Banknote aria-hidden="true" className="text-[#8ee0c8]" size={22} /></div>
+        <aside className="rounded-[22px] bg-[#17352d] p-5 text-white">
+          <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-[#d7eee7]">예상 월 실수령액</p><Banknote aria-hidden="true" className="text-[#8ee0c8]" size={22} /></div>
           <p className="mt-2 break-words text-3xl font-black tabular-nums" data-testid="net-salary-result">{estimatedResult ? formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay) : "계산 불가"}</p>
-          <p className="mt-2 text-xs font-semibold text-[#c8c0eb]">{estimatedResult ? `현재 계획 ${formatCurrency(currentMonthlyIncome)} 대비 ${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay - currentMonthlyIncome)}` : salaryInvalidMessage}</p>
+          <p className="mt-2 text-xs font-semibold text-[#b8d5cd]">{estimatedResult ? `현재 계획 ${formatCurrency(currentMonthlyIncome)} 대비 ${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay - currentMonthlyIncome)}` : salaryInvalidMessage}</p>
           <div className="my-5 h-px bg-white/15" />
           <div className="space-y-3" aria-label="월 공제 항목 시각화">
-            {deductionRows.map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between gap-3 text-xs font-semibold"><span className="text-[#d9d2f8]">{label}</span><span data-testid={label === "소득세" ? "income-tax-result" : undefined}>{formatCurrency(value)}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#8ee0c8]" style={{ width: `${value === 0 ? 0 : Math.max(3, (value / maxDeduction) * 100)}%` }} /></div></div>)}
+            {deductionRows.map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between gap-3 text-xs font-semibold"><span className="text-[#d7eee7]">{label}</span><span data-testid={label === "소득세" ? "income-tax-result" : undefined}>{formatCurrency(value)}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#8ee0c8]" style={{ width: `${value === 0 ? 0 : Math.max(3, (value / maxDeduction) * 100)}%` }} /></div></div>)}
           </div>
-          <div className="mt-5 flex justify-between border-t border-white/15 pt-4 text-sm font-bold"><span className="text-[#d9d2f8]">총 공제</span><span>{formatCurrency(estimatedResult?.deductions.total ?? 0)}</span></div>
-          {estimatedResult && <ul className="mt-5 space-y-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-[#d9d2f8]">{estimatedResult.assumptions.map((assumption) => <li key={assumption}>- {assumption}</li>)}<li>- 적용하면 이 브라우저의 내 계획 월 수입으로 저장됩니다.</li></ul>}
+          <div className="mt-5 flex justify-between border-t border-white/15 pt-4 text-sm font-bold"><span className="text-[#d7eee7]">총 공제</span><span>{formatCurrency(estimatedResult?.deductions.total ?? 0)}</span></div>
+          {estimatedResult && <ul className="mt-5 space-y-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-[#d7eee7]">{estimatedResult.assumptions.map((assumption) => <li key={assumption}>- {assumption}</li>)}<li>- 적용하면 이 브라우저의 내 계획 월 수입으로 저장됩니다.</li></ul>}
           <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!canApplyResult || estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome} onClick={() => { if (!estimatedResult || !canApplyResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
           {appliedNotice && <p aria-live="polite" className="mt-3 text-center text-xs font-bold text-[#8ee0c8]">{appliedNotice}</p>}
         </aside>

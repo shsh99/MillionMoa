@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
@@ -45,6 +45,18 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("link", { name: /고정비 점검/ })).toHaveAttribute("href", "#expense-management");
     expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
     expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("7,000,000원");
+    expect(screen.getByRole("region", { name: "자산 요약" })).toHaveClass(
+      "bg-[var(--wallet-surface)]",
+      "text-[var(--wallet-ink)]",
+    );
+    expect(screen.getByRole("region", { name: "자산 요약" })).not.toHaveClass(
+      "bg-[#4f46a5]",
+      "text-white",
+    );
+    expect(within(screen.getByRole("navigation", { name: "대시보드 카테고리" })).getByRole("link", { name: /요약/ })).toHaveClass(
+      "bg-[var(--wallet-primary-soft)]",
+      "text-[var(--wallet-primary-strong)]",
+    );
     expect(screen.queryByRole("region", { name: "자산 및 대출 편집" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "지출 관리" })).not.toBeInTheDocument();
@@ -63,6 +75,65 @@ describe("DashboardOverview", () => {
     await waitFor(() => expect(within(categoryNav).getByRole("link", { name: /상품/ })).toHaveAttribute("aria-current", "location"));
     expect(screen.getByRole("heading", { name: "청년 금융상품 비교" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "자산 요약" })).not.toBeInTheDocument();
+  });
+
+  it("moves deep-link focus to the panel heading instead of outlining the whole panel", async () => {
+    window.history.replaceState(null, "", "#finance-loans");
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "순자산 전망" })).toHaveFocus());
+    const loansPanel = document.getElementById("finance-loans");
+    expect(loansPanel).not.toHaveFocus();
+    expect(loansPanel).toHaveClass("scroll-mt-36");
+  });
+
+  it("moves focus when navigating between anchors in the same category", async () => {
+    window.history.replaceState(null, "", "#planner-cash-flow");
+    render(<DashboardOverview />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "월 현금흐름" })).toHaveFocus());
+    act(() => {
+      window.history.replaceState(null, "", "#expense-management");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "지출 관리" })).toHaveFocus());
+  });
+
+  it("shows one calculator at a time instead of stacking long forms", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#finance-calculators");
+    render(<DashboardOverview />);
+
+    expect(await screen.findByRole("region", { name: "내 월급 실수령액" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "세액공제 환급 후보" })).not.toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "내 월급 실수령액" })).toHaveFocus());
+    const salaryTab = screen.getByRole("tab", { name: "실수령액" });
+    salaryTab.focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(screen.getByRole("heading", { name: "세액공제 환급 후보" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "내 월급 실수령액" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "연말정산" })).toHaveFocus();
+    expect(screen.getByRole("tabpanel", { name: "연말정산" })).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "실수령액" }));
+    expect(screen.getByRole("tabpanel", { name: "실수령액" })).toBeVisible();
+  });
+
+  it("keeps salary input values when switching calculators", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "#finance-calculators");
+    render(<DashboardOverview />);
+
+    const grossSalary = await screen.findByRole("textbox", { name: "월 세전 급여" });
+    await user.clear(grossSalary);
+    await user.type(grossSalary, "999");
+    await user.click(screen.getByRole("tab", { name: "연말정산" }));
+    await user.click(screen.getByRole("tab", { name: "실수령액" }));
+
+    expect(screen.getByRole("textbox", { name: "월 세전 급여" })).toHaveValue("999");
   });
 
   it("prioritizes expense action when a beginner plan starts in monthly deficit", async () => {
