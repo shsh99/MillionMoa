@@ -13,8 +13,8 @@ const initialValue: FinanceScenarioInput = {
   monthlyNonLoanExpense: 2_200_000,
 };
 
-function ControlledEditor({ onChange = vi.fn() }: { onChange?: (value: FinanceScenarioInput) => void }) {
-  const [value, setValue] = useState(initialValue);
+function ControlledEditor({ initialScenario = initialValue, onChange = vi.fn() }: { initialScenario?: FinanceScenarioInput; onChange?: (value: FinanceScenarioInput) => void }) {
+  const [value, setValue] = useState(initialScenario);
   return (
     <FinanceScenarioEditor
       value={value}
@@ -66,47 +66,75 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByRole("button", { name: "자산 계좌 잔액에 500만원 더하기" })).toBeInTheDocument();
   });
 
-  it("deletes only the selected account", async () => {
+  it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
-    render(<ControlledEditor />);
-    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
-    await user.clear(screen.getByLabelText("자산 계좌 이름"));
-    await user.type(screen.getByLabelText("자산 계좌 이름"), "남길 계좌");
-    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
-
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({
+      id: `asset-${index}`,
+      name,
+      category: "checking" as const,
+      balance: (index + 1) * 1_000_000,
+      annualRate: 0,
+      monthlyContribution: 0,
+    }));
+    render(<ControlledEditor initialScenario={{ ...initialValue, assets: accounts }} />);
+    await user.click(screen.getByRole("button", { name: "둘째 계좌 계좌 선택" }));
     await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
 
-    expect(screen.getByRole("button", { name: /남길 계좌 계좌 선택/ })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /계좌 선택/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "셋째 계좌 계좌 선택" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "둘째 계좌 계좌 선택" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "둘째 계좌 삭제 되돌리기" }));
+    expect(screen.getAllByRole("button", { name: /계좌 선택/ }).map((button) => button.getAttribute("aria-label"))).toEqual([
+      "첫 계좌 계좌 선택",
+      "둘째 계좌 계좌 선택",
+      "셋째 계좌 계좌 선택",
+    ]);
+    expect(screen.getByRole("button", { name: "둘째 계좌 계좌 선택" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("keeps an asset when deletion confirmation is cancelled", async () => {
+  it("undoes a removed loan without a blocking confirmation", async () => {
     const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<ControlledEditor />);
-    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
-
-    await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
-
-    expect(confirm).toHaveBeenCalledWith('"새 자산 1" 계좌를 삭제할까요?');
-    expect(screen.getByRole("button", { name: "새 자산 1 계좌 선택" })).toBeInTheDocument();
-  });
-
-  it("requires confirmation before removing a loan", async () => {
-    const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<ControlledEditor />);
     await user.click(screen.getByRole("tab", { name: "대출" }));
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
 
     await user.click(screen.getByRole("button", { name: "선택한 대출 삭제" }));
-    expect(confirm).toHaveBeenCalledWith('"새 대출 1" 대출을 삭제할까요?');
-    expect(screen.getByRole("button", { name: "새 대출 1 대출 선택" })).toBeInTheDocument();
-
-    confirm.mockReturnValue(true);
-    await user.click(screen.getByRole("button", { name: "선택한 대출 삭제" }));
     expect(screen.queryByRole("button", { name: "새 대출 1 대출 선택" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "새 대출 1 삭제 되돌리기" }));
+    expect(screen.getByRole("button", { name: "새 대출 1 대출 선택" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("restores consecutive deletions in reverse order", async () => {
+    const user = userEvent.setup();
+    const accounts = ["첫 계좌", "둘째 계좌"].map((name, index) => ({
+      id: `asset-${index}`,
+      name,
+      category: "checking" as const,
+      balance: 1_000_000,
+      annualRate: 0,
+      monthlyContribution: 0,
+    }));
+    render(<ControlledEditor initialScenario={{ ...initialValue, assets: accounts }} />);
+
+    await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
+    await user.click(screen.getByRole("button", { name: "선택한 자산 계좌 삭제" }));
+    expect(screen.getByRole("status")).toHaveTextContent("이전 삭제 1건 더");
+
+    await user.click(screen.getByRole("button", { name: "둘째 계좌 삭제 되돌리기" }));
+    expect(screen.getByRole("button", { name: "첫 계좌 삭제 되돌리기" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(screen.getAllByRole("button", { name: /계좌 선택/ }).map((button) => button.getAttribute("aria-label"))).toEqual([
+      "첫 계좌 계좌 선택",
+      "둘째 계좌 계좌 선택",
+    ]);
+  });
+
+  it("focuses the name field after adding a financial account", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor />);
+
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    expect(screen.getByLabelText("자산 계좌 이름")).toHaveFocus();
   });
 
   it("uses stable names and disables autocomplete for editable fields", async () => {

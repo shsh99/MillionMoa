@@ -5,10 +5,11 @@ import {
   Building2,
   Landmark,
   Plus,
+  RotateCcw,
   Trash2,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MoneyInput } from "../../components/money-input";
 import type {
   AssetAccount,
@@ -68,8 +69,27 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
   const [mode, setMode] = useState<"assets" | "loans">("assets");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(value.assets[0]?.id ?? null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(value.loans[0]?.id ?? null);
+  const [removedStack, setRemovedStack] = useState<Array<{ kind: "asset"; item: AssetAccount; index: number } | { kind: "loan"; item: Loan; index: number }>>([]);
+  const assetNameRef = useRef<HTMLInputElement>(null);
+  const loanNameRef = useRef<HTMLInputElement>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
+  const focusAssetNameRef = useRef(false);
+  const focusLoanNameRef = useRef(false);
   const selectedAsset = value.assets.find((item) => item.id === selectedAssetId) ?? value.assets[0];
   const selectedLoan = value.loans.find((item) => item.id === selectedLoanId) ?? value.loans[0];
+  const removed = removedStack.at(-1) ?? null;
+
+  useEffect(() => {
+    if (!focusAssetNameRef.current) return;
+    focusAssetNameRef.current = false;
+    assetNameRef.current?.focus();
+  }, [selectedAsset?.id]);
+
+  useEffect(() => {
+    if (!focusLoanNameRef.current) return;
+    focusLoanNameRef.current = false;
+    loanNameRef.current?.focus();
+  }, [selectedLoan?.id]);
 
   const updateAsset = (patch: Partial<AssetAccount>) => {
     if (!selectedAsset) return;
@@ -95,6 +115,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
       annualRate: 0,
       monthlyContribution: 0,
     };
+    focusAssetNameRef.current = true;
     setSelectedAssetId(asset.id);
     onChange({ ...value, assets: [...value.assets, asset] });
   };
@@ -108,8 +129,51 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
       remainingMonths: 12,
       repaymentMethod: "equal-payment",
     };
+    focusLoanNameRef.current = true;
     setSelectedLoanId(loan.id);
     onChange({ ...value, loans: [...value.loans, loan] });
+  };
+
+  const deleteAsset = () => {
+    if (!selectedAsset) return;
+    const index = value.assets.findIndex((asset) => asset.id === selectedAsset.id);
+    const remaining = value.assets.filter((asset) => asset.id !== selectedAsset.id);
+    setRemovedStack((current) => [...current, { kind: "asset", item: selectedAsset, index }]);
+    setSelectedAssetId(remaining[Math.min(index, remaining.length - 1)]?.id ?? null);
+    onChange({ ...value, assets: remaining });
+    requestAnimationFrame(() => undoButtonRef.current?.focus());
+  };
+
+  const deleteLoan = () => {
+    if (!selectedLoan) return;
+    const index = value.loans.findIndex((loan) => loan.id === selectedLoan.id);
+    const remaining = value.loans.filter((loan) => loan.id !== selectedLoan.id);
+    setRemovedStack((current) => [...current, { kind: "loan", item: selectedLoan, index }]);
+    setSelectedLoanId(remaining[Math.min(index, remaining.length - 1)]?.id ?? null);
+    onChange({ ...value, loans: remaining });
+    requestAnimationFrame(() => undoButtonRef.current?.focus());
+  };
+
+  const undoDelete = () => {
+    if (!removed) return;
+    const hasMoreRemovedItems = removedStack.length > 1;
+    if (removed.kind === "asset") {
+      const assets = [...value.assets];
+      assets.splice(removed.index, 0, removed.item);
+      focusAssetNameRef.current = !hasMoreRemovedItems;
+      setMode("assets");
+      setSelectedAssetId(removed.item.id);
+      onChange({ ...value, assets });
+    } else {
+      const loans = [...value.loans];
+      loans.splice(removed.index, 0, removed.item);
+      focusLoanNameRef.current = !hasMoreRemovedItems;
+      setMode("loans");
+      setSelectedLoanId(removed.item.id);
+      onChange({ ...value, loans });
+    }
+    setRemovedStack((current) => current.slice(0, -1));
+    if (hasMoreRemovedItems) requestAnimationFrame(() => undoButtonRef.current?.focus());
   };
 
   return (
@@ -175,7 +239,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
             {selectedAsset ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="asset-editor-panel">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="계좌 이름"><input aria-label="자산 계좌 이름" autoComplete="off" className={inputClass} name="asset-name" value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
+                  <Field label="계좌 이름"><input aria-label="자산 계좌 이름" autoComplete="off" className={inputClass} name="asset-name" ref={assetNameRef} value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
                   <Field label="계좌 종류"><select aria-label="자산 계좌 종류" autoComplete="off" className={inputClass} name="asset-category" value={selectedAsset.category} onChange={(e) => updateAsset({ category: e.target.value as AssetAccountCategory })}>{assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
                 </div>
                 <MoneyInput id={`asset-${selectedAsset.id}-balance`} label="자산 계좌 잔액" value={selectedAsset.balance} onChange={(balance) => updateAsset({ balance })} />
@@ -183,7 +247,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
                   <Field label="연 수익률 (%)"><input aria-label="자산 연 수익률" autoComplete="off" className={inputClass} name="asset-annual-rate" type="number" inputMode="decimal" min={-100} max={100} step="0.1" value={(selectedAsset.annualRate ?? 0) * 100} onChange={(e) => { const rate = Number(e.target.value); updateAsset({ annualRate: Number.isFinite(rate) ? Math.max(-100, Math.min(100, rate)) / 100 : 0 }); }} /></Field>
                   <MoneyInput id={`asset-${selectedAsset.id}-contribution`} label="월 납입" value={selectedAsset.monthlyContribution ?? 0} onChange={(monthlyContribution) => updateAsset({ monthlyContribution })} />
                 </div>
-                <button type="button" aria-label="선택한 자산 계좌 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={() => { if (!window.confirm(`"${selectedAsset.name}" 계좌를 삭제할까요?`)) return; const remaining = value.assets.filter((asset) => asset.id !== selectedAsset.id); setSelectedAssetId(remaining[0]?.id ?? null); onChange({ ...value, assets: remaining }); }}><Trash2 className="size-4" aria-hidden="true" />계좌 삭제</button>
+                <button type="button" aria-label="선택한 자산 계좌 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={deleteAsset}><Trash2 className="size-4" aria-hidden="true" />계좌 삭제</button>
               </div>
             ) : <EmptyState icon={Building2} text="등록한 자산 계좌가 없습니다" />}
           </div>
@@ -196,7 +260,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
             {selectedLoan ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="loan-editor-panel">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="대출 이름"><input aria-label="대출 이름" autoComplete="off" className={inputClass} name="loan-name" value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
+                  <Field label="대출 이름"><input aria-label="대출 이름" autoComplete="off" className={inputClass} name="loan-name" ref={loanNameRef} value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
                   <Field label="대출 종류"><select aria-label="대출 종류" autoComplete="off" className={inputClass} name="loan-category" value={selectedLoan.category} onChange={(e) => updateLoan({ category: e.target.value as LoanCategory })}>{loanCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
                 </div>
                 <MoneyInput id={`loan-${selectedLoan.id}-principal`} label="대출 원금" value={selectedLoan.principal} onChange={(principal) => updateLoan({ principal })} />
@@ -205,12 +269,13 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
                   <Field label="남은 기간 (개월)"><input aria-label="대출 남은 개월" autoComplete="off" className={inputClass} name="loan-remaining-months" type="number" inputMode="numeric" min={1} max={1200} step={1} value={selectedLoan.remainingMonths} onChange={(e) => updateLoan({ remainingMonths: Math.max(1, Math.min(1200, Math.round(Number(e.target.value) || 1))) })} /></Field>
                 </div>
                 <fieldset><legend className="mb-2 text-sm font-semibold text-[var(--wallet-ink)]">상환 방식</legend><div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="상환 방식">{repaymentMethods.map((method) => <label key={method.value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border px-2 text-center text-sm font-bold ${selectedLoan.repaymentMethod === method.value ? "border-[var(--wallet-coral)] bg-[var(--wallet-coral-soft)] text-[#9a4f58]" : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-muted)]"}`}><input className="sr-only" type="radio" name={`repayment-${selectedLoan.id}`} value={method.value} checked={selectedLoan.repaymentMethod === method.value} onChange={() => updateLoan({ repaymentMethod: method.value })} />{method.label}</label>)}</div></fieldset>
-                <button type="button" aria-label="선택한 대출 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={() => { if (!window.confirm(`"${selectedLoan.name}" 대출을 삭제할까요?`)) return; const remaining = value.loans.filter((loan) => loan.id !== selectedLoan.id); setSelectedLoanId(remaining[0]?.id ?? null); onChange({ ...value, loans: remaining }); }}><Trash2 className="size-4" aria-hidden="true" />대출 삭제</button>
+                <button type="button" aria-label="선택한 대출 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={deleteLoan}><Trash2 className="size-4" aria-hidden="true" />대출 삭제</button>
               </div>
             ) : <EmptyState icon={BadgeDollarSign} text="등록한 대출이 없습니다" />}
           </div>
         )}
       </div>
+      {removed && <div aria-live="polite" className="flex min-h-14 items-center justify-between gap-3 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-4 py-2 text-sm font-semibold text-[var(--wallet-ink)]" role="status"><span><strong className="block">{removed.item.name} 삭제 완료</strong>{removedStack.length > 1 && <span className="mt-0.5 block text-xs text-[var(--wallet-muted)]">이전 삭제 {removedStack.length - 1}건 더</span>}</span><button aria-label={`${removed.item.name} 삭제 되돌리기`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-bold text-[var(--wallet-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]" onClick={undoDelete} ref={undoButtonRef} type="button"><RotateCcw aria-hidden="true" className="size-4" />되돌리기</button></div>}
     </section>
   );
 }

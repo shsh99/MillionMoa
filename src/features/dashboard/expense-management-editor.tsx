@@ -59,8 +59,10 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(() => value.find((item) => item.kind === "fixed")?.id ?? null);
   const [removed, setRemoved] = useState<{ item: ExpenseItem; index: number } | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const editorPanelRef = useRef<HTMLDivElement>(null);
   const undoButtonRef = useRef<HTMLButtonElement>(null);
   const focusNameRef = useRef(false);
+  const scrollEditorRef = useRef(false);
 
   const visibleItems = value.filter((item) => item.kind === kind);
   const selected = value.find((item) => item.id === selectedId && item.kind === kind) ?? visibleItems[0];
@@ -85,6 +87,10 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
     if (!focusNameRef.current) return;
     focusNameRef.current = false;
     nameInputRef.current?.focus();
+    if (scrollEditorRef.current) {
+      scrollEditorRef.current = false;
+      editorPanelRef.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+    }
   }, [selected?.id]);
 
   useEffect(() => {
@@ -103,6 +109,19 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
   const selectKind = (nextKind: ExpenseKind) => {
     setKind(nextKind);
     setSelectedId(value.find((item) => item.kind === nextKind)?.id ?? null);
+  };
+
+  const selectItem = (id: string) => {
+    if (window.innerWidth < 1024) {
+      if (selected?.id === id) {
+        nameInputRef.current?.focus();
+        editorPanelRef.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+        return;
+      }
+      focusNameRef.current = true;
+      scrollEditorRef.current = true;
+    }
+    setSelectedId(id);
   };
 
   const updateSelected = (patch: Partial<ExpenseItem>) => {
@@ -246,7 +265,7 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
                 <section aria-label={category.name} key={category.id}>
                   <div className="mb-1 flex items-center justify-between text-xs font-bold text-[var(--wallet-muted)]"><h4>{category.name}</h4><span className="tabular-nums">{formatWon(category.items.reduce((sum, item) => sum + calculateMonthlyExpenseEquivalent(item), 0))}</span></div>
                   <div className="divide-y divide-[var(--wallet-line)] border-y border-[var(--wallet-line)]">
-                    {category.items.map((item) => <button aria-label={`${item.name} 선택`} aria-pressed={selected?.id === item.id} className={`flex min-h-11 w-full min-w-0 items-center justify-between gap-3 px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wallet-primary)] ${selected?.id === item.id ? "bg-[var(--wallet-primary-soft)]" : "hover:bg-[var(--wallet-surface-tint)]"}`} key={item.id} onClick={() => setSelectedId(item.id)} type="button"><span className="min-w-0 truncate text-sm font-bold text-[var(--wallet-ink)]">{item.name}</span><span className="shrink-0 text-sm font-bold tabular-nums text-[var(--wallet-muted)]">{formatWon(calculateMonthlyExpenseEquivalent(item))}</span></button>)}
+                    {category.items.map((item) => <button aria-label={`${item.name} 선택`} aria-pressed={selected?.id === item.id} className={`flex min-h-11 w-full min-w-0 items-center justify-between gap-3 px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wallet-primary)] ${selected?.id === item.id ? "bg-[var(--wallet-primary-soft)]" : "hover:bg-[var(--wallet-surface-tint)]"}`} key={item.id} onClick={() => selectItem(item.id)} type="button"><span className="min-w-0 truncate text-sm font-bold text-[var(--wallet-ink)]">{item.name}</span><span className="shrink-0 text-sm font-bold tabular-nums text-[var(--wallet-muted)]">{formatWon(calculateMonthlyExpenseEquivalent(item))}</span></button>)}
                   </div>
                 </section>
               ))}
@@ -256,7 +275,7 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
 
         <div className="min-w-0 p-4 sm:p-5">
           {selected && (
-            <div className="space-y-5" data-testid="expense-editor-panel">
+            <div className="scroll-mt-32 space-y-5" data-testid="expense-editor-panel" ref={editorPanelRef}>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field htmlFor={`expense-name-${selected.id}`} label="지출 이름"><input aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `expense-name-error-${selected.id}` : undefined} autoComplete="off" className={inputClass} id={`expense-name-${selected.id}`} maxLength={80} name="expenseName" onBlur={commitName} onChange={(event) => { setNameDraft(event.target.value); setNameError(null); }} ref={nameInputRef} required value={nameDraft} />{nameError && <p className="text-sm font-semibold text-rose-700" id={`expense-name-error-${selected.id}`}>{nameError}</p>}</Field>
                 <Field htmlFor={`expense-category-${selected.id}`} label="카테고리"><select autoComplete="off" className={inputClass} id={`expense-category-${selected.id}`} name="expenseCategory" value={selected.categoryId} onChange={(event) => updateSelected({ categoryId: event.target.value })}>{visibleCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>

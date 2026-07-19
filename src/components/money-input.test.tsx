@@ -58,7 +58,7 @@ describe("MoneyInput", () => {
     await user.click(addButton);
 
     expect(screen.getByRole("textbox", { name: "월급" })).toHaveValue("520");
-    expect(screen.getByText("오백이십만원")).toBeInTheDocument();
+    expect(screen.getByText("5,200,000원 · 오백이십만원")).toBeInTheDocument();
   });
 
   it("clears the amount to zero", async () => {
@@ -145,7 +145,7 @@ describe("MoneyInput", () => {
 
     expect(onChange).toHaveBeenLastCalledWith(0);
     expect(input).toHaveValue("");
-    expect(screen.getByText("영원")).toBeInTheDocument();
+    expect(screen.getByText("0원 · 영원")).toBeInTheDocument();
   });
 
   it("synchronizes its display when an external value replaces a complete draft", () => {
@@ -205,7 +205,7 @@ describe("MoneyInput", () => {
 
     await user.clear(input);
     expect(input).toHaveValue("");
-    expect(screen.getByText("영원")).toBeInTheDocument();
+    expect(screen.getByText("0원 · 영원")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "원래 값 복원" }));
     expect(input).toHaveValue("320");
@@ -324,7 +324,78 @@ describe("MoneyInput", () => {
 
     expect(describedBy).toEqual(["monthly-pay-unit", "monthly-pay-preview"]);
     expect(document.getElementById(describedBy[0])).toHaveTextContent("만원");
-    expect(document.getElementById(describedBy[1])).toHaveTextContent("오백이십만원");
+    expect(document.getElementById(describedBy[1])).toHaveTextContent("5,200,000원 · 오백이십만원");
+  });
+
+  it("asks whether a large pasted number is won or manwon before applying it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    fireEvent.paste(input, { clipboardData: { getData: () => "3,200,000" } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("3,200,000");
+    expect(screen.getByRole("button", { name: "원 단위 3,200,000원으로 입력" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "만원 단위 32,000,000,000원으로 입력" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "원 단위 3,200,000원으로 입력" }));
+    expect(onChange).toHaveBeenLastCalledWith(3_200_000);
+    expect(input).toHaveValue("320");
+  });
+
+  it.each(["9,999원", "3,200,000.00"])("checks the unit for won-formatted paste %s", (pastedText) => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} onChange={onChange} />);
+
+    fireEvent.paste(screen.getByRole("textbox", { name: "월급" }), { clipboardData: { getData: () => pastedText } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(pastedText);
+  });
+
+  it.each(["₩3,200,000", "￦9,999", "KRW 3,200,000"])("checks the unit for currency-marked paste %s", (pastedText) => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} onChange={onChange} />);
+
+    fireEvent.paste(screen.getByRole("textbox", { name: "월급" }), { clipboardData: { getData: () => pastedText } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(pastedText);
+  });
+
+  it.each(["3 200 000원", "(3,200,000원)"])("normalizes common accounting paste %s", (pastedText) => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} allowNegative onChange={onChange} />);
+
+    fireEvent.paste(screen.getByRole("textbox", { name: "월급" }), { clipboardData: { getData: () => pastedText } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(pastedText);
+  });
+
+  it("blocks a numeric paste whose currency format cannot be interpreted", () => {
+    const onChange = vi.fn();
+    render(<ControlledMoneyInput initialValue={0} onChange={onChange} />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    fireEvent.paste(input, { clipboardData: { getData: () => "USD 3,200,000" } });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue("0");
+    expect(screen.getByRole("alert")).toHaveTextContent("USD 3,200,000");
+  });
+
+  it("discards a pending paste choice when the controlled value changes", async () => {
+    const user = userEvent.setup();
+    render(<ExternalResetHarness />);
+    const input = screen.getByRole("textbox", { name: "월급" });
+
+    fireEvent.paste(input, { clipboardData: { getData: () => "3,200,000" } });
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "외부 값 설정" }));
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("provides an accessible sign toggle while retaining the numeric keypad mode", async () => {
@@ -350,7 +421,7 @@ describe("MoneyInput", () => {
       />,
     );
 
-    expect(screen.queryByText("오백이십만원")).not.toBeInTheDocument();
+    expect(screen.queryByText("5,200,000원 · 오백이십만원")).not.toBeInTheDocument();
   });
 
   it("clamps oversized manwon input to the largest safe KRW multiple", () => {

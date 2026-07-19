@@ -44,6 +44,50 @@ describe("ExpenseManagementEditor", () => {
     expect(total).toHaveTextContent("월 환산 지출 합계 970,000원");
   });
 
+  it("moves a mobile user from a long list to the selected item editor", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const originalWidth = window.innerWidth;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+    const longList = Array.from({ length: 15 }, (_, index): ExpenseItem => ({
+      id: `fixed-${index}`,
+      name: `고정비 ${index + 1}`,
+      kind: "fixed",
+      categoryId: "fixed.housing",
+      amount: 10_000,
+      frequency: "monthly",
+      startDate: "2026-01-01",
+      autoRenewal: false,
+    }));
+    render(<ControlledEditor initialValue={longList} />);
+
+    await user.click(screen.getByRole("button", { name: "고정비 15 선택" }));
+
+    expect(screen.getByRole("textbox", { name: "지출 이름" })).toHaveFocus();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: originalScrollIntoView });
+  });
+
+  it("moves to the editor when a mobile user taps the already selected item", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const originalWidth = window.innerWidth;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+    render(<ControlledEditor />);
+
+    await user.click(screen.getByRole("button", { name: "월세 선택" }));
+
+    expect(screen.getByRole("textbox", { name: "지출 이름" })).toHaveFocus();
+    expect(scrollIntoView).toHaveBeenCalled();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: originalScrollIntoView });
+  });
+
   it("adds and edits an item while emitting a new immutable array", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
