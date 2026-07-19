@@ -13,10 +13,11 @@ const initialValue: FinanceScenarioInput = {
   monthlyNonLoanExpense: 2_200_000,
 };
 
-function ControlledEditor({ initialScenario = initialValue, onChange = vi.fn() }: { initialScenario?: FinanceScenarioInput; onChange?: (value: FinanceScenarioInput) => void }) {
+function ControlledEditor({ initialScenario = initialValue, mode, onChange = vi.fn() }: { initialScenario?: FinanceScenarioInput; mode?: "assets" | "loans"; onChange?: (value: FinanceScenarioInput) => void }) {
   const [value, setValue] = useState(initialScenario);
   return (
     <FinanceScenarioEditor
+      mode={mode}
       value={value}
       onChange={(next) => {
         onChange(next);
@@ -27,6 +28,45 @@ function ControlledEditor({ initialScenario = initialValue, onChange = vi.fn() }
 }
 
 describe("FinanceScenarioEditor", () => {
+  it("renders only asset controls when the parent selects the asset workspace", () => {
+    render(<ControlledEditor mode="assets" />);
+
+    expect(screen.getByRole("button", { name: "자산 계좌 추가" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "대출" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "대출 추가" })).not.toBeInTheDocument();
+  });
+
+  it("renders only loan controls when the parent selects the loan workspace", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="loans" />);
+
+    expect(screen.getByRole("button", { name: "대출 추가" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "자산" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "자산 계좌 추가" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    expect(screen.getByLabelText("대출 이름")).toHaveFocus();
+  });
+
+  it("keeps multiple loans independent in the controlled loan workspace", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="loans" />);
+
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.clear(screen.getByLabelText("대출 이름"));
+    await user.type(screen.getByLabelText("대출 이름"), "신용대출");
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.clear(screen.getByLabelText("대출 이름"));
+    await user.type(screen.getByLabelText("대출 이름"), "전세대출");
+    await user.click(screen.getByRole("button", { name: "신용대출 대출 선택" }));
+    await user.clear(screen.getByRole("textbox", { name: "대출 원금" }));
+    await user.type(screen.getByRole("textbox", { name: "대출 원금" }), "300");
+
+    await user.click(screen.getByRole("button", { name: "전세대출 대출 선택" }));
+    expect(screen.getByRole("textbox", { name: "대출 원금" })).toHaveValue("0");
+    expect(screen.getAllByRole("button", { name: /대출 선택/ })).toHaveLength(2);
+  });
+
   it("keeps asset and loan editors unframed inside the outer container", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);

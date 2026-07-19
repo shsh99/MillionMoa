@@ -23,6 +23,7 @@ import type {
 type Props = {
   value: FinanceScenarioInput;
   onChange: (value: FinanceScenarioInput) => void;
+  mode?: "assets" | "loans";
 };
 
 const assetCategories: Array<{ value: AssetAccountCategory; label: string }> = [
@@ -65,8 +66,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputClass = "h-12 w-full rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-base font-semibold text-[var(--wallet-ink)] shadow-sm outline-none focus:border-[var(--wallet-primary)] focus:ring-2 focus:ring-[var(--wallet-primary-soft)]";
 
-export function FinanceScenarioEditor({ value, onChange }: Props) {
-  const [mode, setMode] = useState<"assets" | "loans">("assets");
+export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }: Props) {
+  const [internalMode, setInternalMode] = useState<"assets" | "loans">("assets");
+  const mode = controlledMode ?? internalMode;
+  const setMode = (nextMode: "assets" | "loans") => {
+    if (!controlledMode) setInternalMode(nextMode);
+  };
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(value.assets[0]?.id ?? null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(value.loans[0]?.id ?? null);
   const [removedStack, setRemovedStack] = useState<Array<{ kind: "asset"; item: AssetAccount; index: number } | { kind: "loan"; item: Loan; index: number }>>([]);
@@ -185,7 +190,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
         <span className="grid size-10 place-items-center rounded-2xl bg-[var(--wallet-primary-soft)]"><WalletCards className="size-5 text-[var(--wallet-primary-strong)]" aria-hidden="true" /></span>
       </div>
 
-      <div className="grid grid-cols-2 bg-[var(--wallet-surface-tint)] p-1.5" role="tablist" aria-label="금융 계정 종류">
+      {!controlledMode && <div className="grid grid-cols-2 bg-[var(--wallet-surface-tint)] p-1.5" role="tablist" aria-label="금융 계정 종류">
         {([
           { id: "assets" as const, label: "자산", icon: Landmark, count: value.assets.length },
           { id: "loans" as const, label: "대출", icon: BadgeDollarSign, count: value.loans.length },
@@ -216,7 +221,7 @@ export function FinanceScenarioEditor({ value, onChange }: Props) {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       <div className="p-4 sm:p-5">
         {mode === "assets" ? (

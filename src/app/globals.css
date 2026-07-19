@@ -38,10 +38,15 @@ body {
   margin: 0;
   background: var(--wallet-page);
   color: var(--wallet-ink);
-  font-family: "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-family: var(--font-millionmoa, "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-pretendard {
+  --font-millionmoa: "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-family: var(--font-millionmoa);
 }
 
 :focus-visible {

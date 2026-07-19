@@ -16,6 +16,7 @@ export interface StorageLike {
 const financeScenarioEnvelopeSchema = z.object({
   version: z.literal(2),
   scenario: financeScenarioSchema,
+  savedAt: z.iso.datetime().optional(),
 });
 
 const legacyFinanceScenarioEnvelopeSchema = z.object({
@@ -43,12 +44,13 @@ export function saveFinanceScenario(
   storage: StorageLike,
   ownerId: string,
   scenario: FinanceScenarioInput,
+  options: { savedAt?: string } = {},
 ): void {
   const canonicalScenario = {
     ...scenario,
     monthlyNonLoanExpense: calculateExpenseSummary(scenario.expenses).monthlyTotal,
   };
-  const envelope = financeScenarioEnvelopeSchema.parse({ version: 2, scenario: canonicalScenario });
+  const envelope = financeScenarioEnvelopeSchema.parse({ version: 2, scenario: canonicalScenario, ...options });
   const serialized = JSON.stringify(envelope);
   if (serializedByteLength(serialized) > MAX_SERIALIZED_PAYLOAD_BYTES) {
     throw new RangeError("finance scenario payload must not exceed 256 KiB");
@@ -60,7 +62,7 @@ export function loadFinanceScenario(
   storage: StorageLike,
   ownerId: string,
   fallback: FinanceScenarioInput,
-): { scenario: FinanceScenarioInput; source: "saved" | "fallback" } {
+): { scenario: FinanceScenarioInput; source: "saved" | "fallback"; savedAt?: string } {
   try {
     const storedValue = storage.getItem(getFinanceScenarioStorageKey(ownerId));
     if (storedValue === null) return { scenario: fallback, source: "fallback" };
@@ -89,7 +91,9 @@ export function loadFinanceScenario(
     }
 
     const envelope = financeScenarioEnvelopeSchema.parse(payload);
-    return { scenario: envelope.scenario, source: "saved" };
+    return envelope.savedAt
+      ? { scenario: envelope.scenario, source: "saved", savedAt: envelope.savedAt }
+      : { scenario: envelope.scenario, source: "saved" };
   } catch {
     return { scenario: fallback, source: "fallback" };
   }
