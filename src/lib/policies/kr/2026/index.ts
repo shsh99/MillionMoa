@@ -7,3 +7,7 @@ export {
   KR_YEAR_END_TAX_POLICY_2026,
   type KrYearEndTaxPolicy2026,
 } from "./year-end-tax-policy";
+export {
+  KR_FINANCIAL_PRODUCTS_POLICY_2026,
+  type KrFinancialProductsPolicy2026,
+} from "./financial-products-policy";

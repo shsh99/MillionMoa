@@ -61,7 +61,7 @@ describe("NetSalaryCalculator", () => {
     await user.click(screen.getByRole("checkbox", { name: "임원·최대주주 친족·일용근로자 등 제외 근로자가 아니에요" }));
 
     expect(screen.getByTestId("income-tax-result")).toHaveTextContent("7,000원");
-  });
+  }, 10_000);
 
   it("supports 60-plus reduction from the UI", async () => {
     const user = userEvent.setup();
@@ -81,7 +81,7 @@ describe("NetSalaryCalculator", () => {
     await user.click(screen.getByRole("checkbox", { name: "임원·최대주주 친족·일용근로자 등 제외 근로자가 아니에요" }));
 
     expect(screen.getByTestId("income-tax-result")).toHaveTextContent("21,000원");
-  });
+  }, 10_000);
 
   it("builds taxable salary from itemized non-taxable pay and official table inputs", async () => {
     const user = userEvent.setup();

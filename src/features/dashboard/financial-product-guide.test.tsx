@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FinancialProductGuide } from "./financial-product-guide";
 
@@ -12,7 +13,7 @@ describe("FinancialProductGuide", () => {
     expect(screen.getByText("ISA 서민형")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /서민금융진흥원/ })).toHaveAttribute("href", "https://www.kinfa.or.kr/financialProduct/youthFutureSavings.do");
     expect(screen.getByRole("link", { name: /국토교통부/ })).toHaveAttribute("href", "https://www.molit.go.kr/2024dreamaccount/main.jsp");
-    expect(screen.getByRole("link", { name: /금융투자협회/ })).toHaveAttribute("href", "https://law.kofia.or.kr/service/law/lawFullScreenContent.do?historySeq=1617&seq=343");
+    expect(screen.getByRole("link", { name: /금융위원회/ })).toHaveAttribute("href", "https://www.fsc.go.kr/po020201/27339");
   });
 
   it("separates closed youth leap account status from active 2026 product calculations", () => {
@@ -20,5 +21,20 @@ describe("FinancialProductGuide", () => {
 
     expect(screen.getByText(/청년도약계좌는.*신규 가입이 2025-12-31까지/)).toBeInTheDocument();
     expect(screen.getByText(/ISA 비과세 한도 확대안은 미확정/)).toBeInTheDocument();
+  });
+
+  it("lets users switch product workspaces and adjust ISA benefit assumptions", async () => {
+    const user = userEvent.setup();
+    render(<FinancialProductGuide />);
+
+    await user.click(screen.getAllByRole("button", { name: "계산 열기" })[2]);
+
+    expect(screen.getByRole("heading", { name: "ISA 세금 절감 예상" })).toBeInTheDocument();
+    expect(screen.getByText("서민형 비과세 한도 400만원 적용")).toBeInTheDocument();
+    expect(screen.getAllByText("616,000원").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("checkbox", { name: "서민형 비과세 한도 400만원 적용" }));
+
+    expect(screen.getByText("418,000원")).toBeInTheDocument();
   });
 });
