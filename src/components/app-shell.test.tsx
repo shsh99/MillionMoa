@@ -5,7 +5,9 @@ import { AppShell } from "@/components/app-shell";
 import { DashboardOverview } from "@/features/dashboard/dashboard-overview";
 
 describe("AppShell", () => {
-  it("preserves navigation anchors and exposes an active icon-based mobile nav", () => {
+  it("preserves navigation anchors and exposes an active icon-based mobile nav", async () => {
+    window.history.replaceState(null, "", "/");
+
     render(
       <AppShell>
         <DashboardOverview />
@@ -47,9 +49,9 @@ describe("AppShell", () => {
     expect(mobileNav).toHaveClass("pb-[env(safe-area-inset-bottom)]");
     const expectedItems = [
       ["홈", "/"],
+      ["입력", "#planner-cash-flow"],
       ["계산", "#finance-calculators"],
-      ["계좌", "#finance-accounts"],
-      ["대출", "#finance-loans"],
+      ["그래프", "#finance-loans"],
     ] as const;
 
     expect(new Set(expectedItems.map(([, href]) => href)).size).toBe(4);
@@ -58,10 +60,20 @@ describe("AppShell", () => {
       const link = within(mobileNav).getByRole("link", { name: label });
       expect(link).toHaveAttribute("href", href);
       expect(link.querySelector("svg")).toBeInTheDocument();
-      if (href.startsWith("#")) expect(document.querySelector(href)).toBeVisible();
     }
 
     expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    act(() => {
+      window.history.replaceState(null, "", "#finance-calculators");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(await screen.findByRole("region", { name: "내 월급 실수령액" })).toBeVisible();
+    expect(within(mobileNav).getByRole("link", { name: "홈" })).not.toHaveAttribute("aria-current");
+    expect(within(mobileNav).getByRole("link", { name: "계산" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -71,8 +83,9 @@ describe("AppShell", () => {
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
-    expect(within(mobileNav).getByRole("link", { name: "홈" })).not.toHaveAttribute("aria-current");
-    expect(within(mobileNav).getByRole("link", { name: "계좌" })).toHaveAttribute(
+    expect(await screen.findByRole("region", { name: "자산 및 대출 편집" })).toBeVisible();
+    expect(within(mobileNav).getByRole("link", { name: "계산" })).not.toHaveAttribute("aria-current");
+    expect(within(mobileNav).getByRole("link", { name: "입력" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -82,8 +95,9 @@ describe("AppShell", () => {
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
-    expect(within(mobileNav).getByRole("link", { name: "계좌" })).not.toHaveAttribute("aria-current");
-    expect(within(mobileNav).getByRole("link", { name: "대출" })).toHaveAttribute(
+    expect(await screen.findByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeVisible();
+    expect(within(mobileNav).getByRole("link", { name: "입력" })).not.toHaveAttribute("aria-current");
+    expect(within(mobileNav).getByRole("link", { name: "그래프" })).toHaveAttribute(
       "aria-current",
       "page",
     );
