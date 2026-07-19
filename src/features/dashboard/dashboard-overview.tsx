@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Calculator, ChartNoAxesCombined, Landmark, ListChecks, PiggyBank, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CreditCard, Landmark, ListChecks, PiggyBank, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
@@ -175,23 +175,21 @@ function StarterChecklist({ scenario }: { scenario: ReturnType<typeof calculateF
   };
 
   return (
-    <section aria-label="사회초년생 시작 체크" className="rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+    <section aria-label="사회초년생 시작 체크" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusToneClass}`}>{starter.status.label}</p>
-          <h2 className="mt-3 text-lg font-extrabold text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">NEXT ACTION</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
           <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[var(--wallet-muted)]">{starter.status.headline}. {starter.status.detail}</p>
         </div>
-        <dl className="grid shrink-0 grid-cols-2 gap-2 text-xs font-bold text-[var(--wallet-muted)] sm:w-56">
-          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2.5"><dt>지출 비중</dt><dd className="mt-1 text-sm font-extrabold text-[var(--wallet-ink)]">{Math.round(starter.expenseRatio * 100)}%</dd></div>
-          <div className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-2.5"><dt>비상금</dt><dd className="mt-1 text-sm font-extrabold text-[var(--wallet-ink)]">{starter.emergencyMonths.toFixed(1)}개월</dd></div>
-        </dl>
+        <span className={`inline-flex h-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${statusToneClass}`}>{starter.status.label}</span>
       </div>
-      <div className="mt-5 grid border-t border-[var(--wallet-line)] sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-5 grid gap-x-5 border-t border-[var(--wallet-line)] sm:grid-cols-2">
         {starter.actions.map((action) => (
-          <a key={action.label} href={action.href} className="group flex min-h-20 items-start gap-3 border-b border-[var(--wallet-line)] py-3.5 transition-colors hover:bg-[var(--wallet-surface-tint)] active:bg-[var(--wallet-primary-soft)] sm:px-3 lg:border-b-0">
+          <a key={action.label} href={action.href} className="group flex min-h-[76px] items-center gap-3 border-b border-[var(--wallet-line)] py-3 transition-colors hover:text-[var(--wallet-primary)] active:bg-[var(--wallet-primary-soft)]">
             <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${actionToneClass[action.tone]}`}>{action.icon}</span>
-            <span className="min-w-0"><strong className="block text-sm font-extrabold text-[var(--wallet-ink)]">{action.label}</strong><span className="mt-1 block text-xs font-medium leading-5 text-[var(--wallet-muted)]">{action.detail}</span></span>
+            <span className="min-w-0 flex-1"><strong className="block text-sm font-extrabold text-[var(--wallet-ink)]">{action.label}</strong><span className="mt-1 block text-xs font-medium leading-5 text-[var(--wallet-muted)]">{action.detail}</span></span>
+            <ArrowRight aria-hidden="true" className="shrink-0 text-[var(--wallet-muted)] transition-transform group-hover:translate-x-0.5" size={17} />
           </a>
         ))}
       </div>
@@ -224,6 +222,84 @@ function CashFlowMiniBars({ scenario }: { scenario: ReturnType<typeof calculateF
   );
 }
 
+function MonthlyFlowOverview({ scenario }: { scenario: ReturnType<typeof calculateFinanceScenario> }) {
+  const income = Math.max(1, scenario.monthlyIncome);
+  const expensePercent = Math.min(100, Math.max(0, (scenario.monthlyNonLoanExpense / income) * 100));
+  const loanPercent = Math.min(100 - expensePercent, Math.max(0, (scenario.totalLoanPayment / income) * 100));
+  const surplusPercent = Math.max(0, 100 - expensePercent - loanPercent);
+  const expenseEnd = expensePercent;
+  const loanEnd = expensePercent + loanPercent;
+
+  return (
+    <section aria-labelledby="monthly-flow-title" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">MONEY FLOW</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="monthly-flow-title">이번 달 흐름</h2>
+        </div>
+        <a className="grid size-10 place-items-center rounded-full bg-[var(--wallet-surface-tint)] text-[var(--wallet-muted)] hover:text-[var(--wallet-primary)]" href="#planner-cash-flow" aria-label="월 현금흐름 입력으로 이동">
+          <ArrowRight aria-hidden="true" size={19} />
+        </a>
+      </div>
+      <div className="mt-5 flex items-center gap-6">
+        <div
+          aria-label="월 수입 사용 비율"
+          className="relative grid size-32 shrink-0 place-items-center rounded-full"
+          role="img"
+          style={{ background: `conic-gradient(var(--wallet-coral) 0 ${expenseEnd}%, var(--wallet-warning) ${expenseEnd}% ${loanEnd}%, var(--wallet-mint) ${loanEnd}% 100%)` }}
+        >
+          <div className="grid size-[88px] place-items-center rounded-full bg-white text-center shadow-[0_0_0_1px_var(--wallet-line)]">
+            <span className="text-[11px] font-bold text-[var(--wallet-muted)]">남는 돈</span>
+            <strong className={`block text-sm font-black ${scenario.rawMonthlySurplus < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-primary-strong)]"}`}>{formatShortMoney(scenario.rawMonthlySurplus)}</strong>
+          </div>
+        </div>
+        <dl className="min-w-0 flex-1 space-y-3 text-sm">
+          {[
+            { label: "생활 지출", value: expensePercent, color: "bg-[var(--wallet-coral)]" },
+            { label: "대출 납입", value: loanPercent, color: "bg-[var(--wallet-warning)]" },
+            { label: "저축 가능", value: surplusPercent, color: "bg-[var(--wallet-mint)]" },
+          ].map((item) => (
+            <div className="flex items-center justify-between gap-3" key={item.label}>
+              <dt className="flex min-w-0 items-center gap-2 font-semibold text-[var(--wallet-muted)]"><span className={`size-2.5 rounded-full ${item.color}`} />{item.label}</dt>
+              <dd className="font-black text-[var(--wallet-ink)]">{Math.round(item.value)}%</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
+  return (
+    <section aria-labelledby="account-snapshot-title" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">MY ACCOUNTS</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="account-snapshot-title">내 금융 계좌</h2>
+        </div>
+        <a className="text-xs font-extrabold text-[var(--wallet-primary)] hover:underline" href="#finance-accounts">전체 관리</a>
+      </div>
+      <div className="mt-4 divide-y divide-[var(--wallet-line)]">
+        {input.assets.map((asset) => (
+          <div className="flex min-h-16 items-center gap-3 py-3" key={asset.id}>
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary)]"><CreditCard aria-hidden="true" size={20} /></span>
+            <div className="min-w-0 flex-1"><strong className="block truncate text-sm font-extrabold text-[var(--wallet-ink)]">{asset.name}</strong><span className="mt-0.5 block text-xs font-semibold text-[var(--wallet-muted)]">연 {((asset.annualRate ?? 0) * 100).toFixed(1)}%</span></div>
+            <span className="shrink-0 text-sm font-black text-[var(--wallet-ink)]">{formatShortMoney(asset.balance)}</span>
+          </div>
+        ))}
+        {input.loans.map((loan) => (
+          <div className="flex min-h-16 items-center gap-3 py-3" key={loan.id}>
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]"><Building2 aria-hidden="true" size={20} /></span>
+            <div className="min-w-0 flex-1"><strong className="block truncate text-sm font-extrabold text-[var(--wallet-ink)]">{loan.name}</strong><span className="mt-0.5 block text-xs font-semibold text-[var(--wallet-muted)]">남은 {loan.remainingMonths}개월 · 연 {(loan.annualRate * 100).toFixed(1)}%</span></div>
+            <span className="shrink-0 text-sm font-black text-[var(--wallet-coral)]">-{formatShortMoney(loan.principal)}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function categoryFromHash(hash: string): DashboardCategory {
   if (["#planner-cash-flow", "#expense-management", "#finance-accounts"].includes(hash)) return "input";
   if (hash === "#finance-calculators") return "calculators";
@@ -242,23 +318,24 @@ function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCatego
   ];
 
   return (
-    <nav aria-label="대시보드 카테고리" className="sticky top-[60px] z-20 -mx-4 border-y border-[var(--wallet-line)] bg-[var(--wallet-page)]/94 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-[20px] sm:border sm:bg-[var(--wallet-surface)] sm:p-1.5 sm:shadow-[var(--wallet-shadow)]">
-      <div className="grid grid-cols-5 gap-1">
+    <nav aria-label="대시보드 카테고리" className="sticky top-24 hidden self-start rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-3 shadow-[var(--wallet-shadow)] md:block">
+      <p className="px-3 pb-2 pt-1 text-[11px] font-black uppercase text-[var(--wallet-muted)]">Money menu</p>
+      <div className="grid gap-1.5">
         {items.map((item) => (
           <a
             key={item.href}
             href={item.href}
             aria-current={activeCategory === item.category ? "location" : undefined}
-            className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 text-xs font-extrabold transition-[background-color,color,transform] active:scale-[0.98] sm:flex-row sm:justify-start sm:gap-2 sm:px-3 sm:text-sm ${
+            className={`flex min-h-[58px] min-w-0 items-center gap-3 rounded-[18px] px-3 text-sm font-extrabold transition-[background-color,color,transform] active:scale-[0.98] ${
               activeCategory === item.category
-                ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"
+                ? "bg-[var(--wallet-primary)] text-white shadow-[0_8px_18px_rgba(79,91,213,0.2)]"
                 : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)] hover:text-[var(--wallet-ink)]"
             }`}
           >
-            <span aria-hidden="true" className={`grid size-7 shrink-0 place-items-center rounded-xl ${activeCategory === item.category ? "bg-[var(--wallet-surface)]" : ""}`}>{item.icon}</span>
+            <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-xl ${activeCategory === item.category ? "bg-white/16" : "bg-[var(--wallet-surface-tint)]"}`}>{item.icon}</span>
             <span className="min-w-0">
               <span className="block">{item.label}</span>
-              <span className="hidden truncate text-[11px] font-medium text-[var(--wallet-muted)] sm:block">{item.detail}</span>
+              <span className={`block truncate text-[11px] font-medium ${activeCategory === item.category ? "text-white/70" : "text-[var(--wallet-muted)]"}`}>{item.detail}</span>
             </span>
           </a>
         ))}
@@ -374,32 +451,32 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const isNetWorthNegative = scenario.netWorth < 0;
 
   return (
-    <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-      <header className="mb-5 flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-sm font-medium text-[var(--wallet-muted)]">김기은님의 머니 플랜</p><h1 id="dashboard-overview-title" className="mt-1 break-keep text-xl font-extrabold text-[var(--wallet-ink)] sm:text-2xl">1억을 향한 자산 지도</h1></div>
-        <span className="shrink-0 rounded-full bg-[var(--wallet-primary-soft)] px-3 py-2 text-xs font-bold text-[var(--wallet-primary-strong)]">오늘 기준</span>
+    <section aria-labelledby="dashboard-overview-title" className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+      <header className="mb-6 flex items-end justify-between gap-3 md:pl-[14.5rem]">
+        <div className="min-w-0"><p className="text-sm font-semibold text-[var(--wallet-muted)]">안녕하세요, 김기은님</p><h1 id="dashboard-overview-title" className="mt-1 break-keep text-2xl font-black text-[var(--wallet-ink)] sm:text-[1.75rem]">1억을 향한 자산 지도</h1></div>
+        <span className="shrink-0 rounded-full bg-[var(--wallet-mint-soft)] px-3 py-2 text-xs font-extrabold text-[#14806d]">오늘 기준</span>
       </header>
 
       {storageNotice && <p role="status" className="mb-4 rounded-2xl bg-[var(--wallet-coral-soft)] px-4 py-3 text-sm font-semibold text-[#9a4f58]">{storageNotice}</p>}
 
-      <div className="grid gap-5">
+      <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
         <CategoryNavigator activeCategory={activeCategory} />
+        <div className="grid min-w-0 gap-5">
 
         {activeCategory === "overview" && (
           <>
-            <section aria-label="자산 요약" className="overflow-hidden rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-ink)] shadow-[var(--wallet-shadow)]">
-              <div className="p-5 sm:p-7">
-                <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-[var(--wallet-muted)]">현재 순자산</p><span className="grid size-10 place-items-center rounded-2xl bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"><Target aria-hidden="true" size={21} /></span></div>
-                <p aria-live="polite" className={`mt-2 break-words text-[2.25rem] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-ink)]"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
-                <div className="mt-5 grid grid-cols-3 divide-x divide-[var(--wallet-line)] border-y border-[var(--wallet-line)] py-3 text-xs font-semibold text-[var(--wallet-muted)]">
-                  <div className="min-w-0 px-2 first:pl-0 sm:px-4"><span className="block">보유 자산</span><strong className="mt-1 block break-words text-sm font-extrabold text-[var(--wallet-ink)]">{formatShortMoney(scenario.totalAssetBalances)}</strong></div>
-                  <div className="min-w-0 px-2 sm:px-4"><span className="block">등록 부채</span><strong className="mt-1 block break-words text-sm font-extrabold text-[var(--wallet-coral)]">{formatShortMoney(scenario.totalLiabilities)}</strong></div>
-                  <div className="min-w-0 px-2 last:pr-0 sm:px-4"><span className="block">월 여유</span><strong className={`mt-1 block break-words text-sm font-extrabold ${scenario.rawMonthlySurplus < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-primary-strong)]"}`}>{formatShortMoney(scenario.rawMonthlySurplus)}</strong></div>
+            <section aria-label="자산 요약" className="overflow-hidden rounded-[30px] border border-[#dfe2ff] bg-[var(--wallet-surface)] text-[var(--wallet-ink)] shadow-[0_18px_45px_rgba(55,62,135,0.10)]">
+              <div className="bg-[var(--wallet-primary-soft)] p-5 sm:p-7">
+                <div className="flex items-center justify-between gap-3"><p className="text-sm font-extrabold text-[var(--wallet-primary-strong)]">나의 순자산</p><span className="grid size-11 place-items-center rounded-[18px] bg-[var(--wallet-primary)] text-white shadow-[0_8px_18px_rgba(79,91,213,0.2)]"><Target aria-hidden="true" size={21} /></span></div>
+                <p aria-live="polite" className={`mt-3 break-words text-[2.25rem] font-black leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-ink)]"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
+                <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/80" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[var(--wallet-primary)] transition-[width] motion-reduce:transition-none" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
+                <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold text-[var(--wallet-muted)]">{isNetWorthNegative ? "부채 초과" : "목표까지"} <strong className="ml-1 font-black text-[var(--wallet-ink)]">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-semibold text-[var(--wallet-muted)]">예상 <strong className="ml-1 font-black text-[var(--wallet-primary-strong)]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
+                <div className="mt-5 flex gap-2">
+                  <a className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-[var(--wallet-primary)] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(79,91,213,0.2)]" href="#finance-accounts">자산 입력</a>
+                  <a className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-4 text-sm font-black text-[var(--wallet-primary-strong)]" href="#finance-loans">전망 보기</a>
                 </div>
-                <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--wallet-line)]" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[var(--wallet-primary)] transition-[width] motion-reduce:transition-none" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
-                <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-medium text-[var(--wallet-muted)]">{isNetWorthNegative ? "부채 초과" : "남은 목표"} <strong className="ml-1 font-extrabold text-[var(--wallet-ink)]">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-medium text-[var(--wallet-muted)]">예상 <strong className="ml-1 font-extrabold text-[var(--wallet-primary-strong)]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
               </div>
-              <dl className="grid grid-cols-2 border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] sm:grid-cols-4 sm:divide-x sm:divide-[var(--wallet-line)]">
+              <dl className="grid grid-cols-2 bg-white sm:grid-cols-4 sm:divide-x sm:divide-[var(--wallet-line)]">
                 <Metric icon={<ArrowDownToLine size={16} />} label="월 수입" value={scenario.monthlyIncome} />
                 <Metric icon={<ArrowUpFromLine size={16} />} label="생활 지출" value={scenario.monthlyNonLoanExpense} testId="overview-monthly-expense" />
                 <Metric icon={<Landmark size={16} />} label="대출 납입" value={scenario.totalLoanPayment} />
@@ -407,9 +484,14 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
               </dl>
             </section>
 
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+              <MonthlyFlowOverview scenario={scenario} />
+              <FinancialAccountSnapshot input={input} />
+            </div>
+
             <StarterChecklist scenario={scenario} />
 
-            <section className="rounded-[22px] bg-[var(--wallet-mint-soft)] p-4 text-sm font-medium leading-6 text-[#205f52]" aria-label="계산 안내">계좌 잔액과 대출 원금은 각각 합산하며, 순자산은 자산보다 부채가 많으면 음수로 표시합니다. 전망에는 대출 원금과 이자, 상환 방식, 월 적자까지 반영됩니다.</section>
+            <section className="flex items-start gap-3 rounded-[22px] bg-[var(--wallet-mint-soft)] p-4 text-sm font-semibold leading-6 text-[#246f62]" aria-label="계산 안내"><ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={19} />계좌 잔액과 대출 원금은 각각 합산하며, 순자산은 자산보다 부채가 많으면 음수로 표시합니다. 전망에는 대출 원금과 이자, 상환 방식, 월 적자까지 반영됩니다.</section>
           </>
         )}
 
@@ -478,6 +560,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
             </details>
           </>
         )}
+        </div>
       </div>
     </section>
   );

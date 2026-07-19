@@ -21,35 +21,27 @@ describe("AppShell", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
 
     const shell = screen.getByRole("main").parentElement;
-    expect(shell).toHaveClass("pb-[calc(5.5rem+env(safe-area-inset-bottom))]");
+    expect(shell).toHaveClass("pb-[calc(4.75rem+env(safe-area-inset-bottom))]");
 
     const header = screen.getByRole("link", { name: /MillionMoa/ }).closest("header")!;
-    expect(header.firstElementChild).toHaveClass("h-[60px]");
+    expect(header.firstElementChild).toHaveClass("h-16");
     expect(screen.getByTestId("brand-mark")).toHaveClass(
-      "rounded-xl",
-      "bg-[var(--wallet-primary-soft)]",
-      "text-[var(--wallet-primary-strong)]",
+      "rounded-2xl",
+      "bg-[var(--wallet-primary)]",
+      "text-white",
     );
+    expect(screen.getByRole("button", { name: "알림" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "내 정보" })).toBeInTheDocument();
 
     const main = screen.getByRole("main");
     expect(main).not.toHaveClass("max-w-6xl", "px-4", "sm:px-6", "lg:px-8");
 
-    const desktopNav = screen.getByRole("navigation", { name: "주요 메뉴" });
-    expect(within(desktopNav).getByRole("link", { name: "대시보드" })).toHaveAttribute("href", "/");
-    expect(within(desktopNav).getByRole("link", { name: "월급 배분" })).toHaveAttribute(
-      "href",
-      "#planner-cash-flow",
-    );
-    expect(within(desktopNav).getByRole("link", { name: "계산기" })).toHaveAttribute(
-      "href",
-      "#finance-calculators",
-    );
+    expect(screen.queryByRole("navigation", { name: "주요 메뉴" })).not.toBeInTheDocument();
 
     const mobileNav = screen.getByRole("navigation", { name: "모바일 주요 메뉴" });
     expect(mobileNav).toHaveClass(
-      "inset-x-3",
-      "bottom-3",
-      "rounded-[22px]",
+      "inset-x-0",
+      "bottom-0",
       "pb-[env(safe-area-inset-bottom)]",
     );
     const expectedItems = [
@@ -73,8 +65,7 @@ describe("AppShell", () => {
       "page",
     );
     expect(within(mobileNav).getByRole("link", { name: "홈" })).toHaveClass(
-      "bg-[var(--wallet-primary-soft)]",
-      "text-[var(--wallet-primary-strong)]",
+      "text-[var(--wallet-primary)]",
     );
 
     act(() => {
