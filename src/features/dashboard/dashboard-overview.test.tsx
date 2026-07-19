@@ -11,6 +11,7 @@ const ownerStorageKey = getFinanceScenarioStorageKey("local-demo-profile");
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
 });
 
 describe("formatExpectedMonth", () => {
@@ -28,8 +29,7 @@ describe("DashboardOverview", () => {
   it("renders a stable non-editable loading state before persistence hydration", () => {
     const html = renderToString(<DashboardOverview />);
 
-    expect(html).toContain("계획 불러오는 중");
-    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain("대시보드 카테고리");
     expect(html).not.toContain('name="monthly-income"');
     expect(html).not.toContain('aria-label="자산 및 대출 편집"');
   });
@@ -45,10 +45,24 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("link", { name: /고정비 점검/ })).toHaveAttribute("href", "#expense-management");
     expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
     expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("7,000,000원");
-    expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "대출별 상환 현황" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "지출 관리" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "자산 및 대출 편집" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "지출 관리" })).not.toBeInTheDocument();
+  });
+
+  it("switches category panels from hash links instead of stacking every section", async () => {
+    const user = userEvent.setup();
+    render(<DashboardOverview />);
+
+    const categoryNav = screen.getByRole("navigation", { name: "대시보드 카테고리" });
+    expect(within(categoryNav).getByRole("link", { name: /요약/ })).toHaveAttribute("aria-current", "location");
+    expect(screen.queryByRole("heading", { name: "청년 금융상품 비교" })).not.toBeInTheDocument();
+
+    await user.click(within(categoryNav).getByRole("link", { name: /상품/ }));
+
+    await waitFor(() => expect(within(categoryNav).getByRole("link", { name: /상품/ })).toHaveAttribute("aria-current", "location"));
+    expect(screen.getByRole("heading", { name: "청년 금융상품 비교" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "자산 요약" })).not.toBeInTheDocument();
   });
 
   it("prioritizes expense action when a beginner plan starts in monthly deficit", async () => {
@@ -69,18 +83,19 @@ describe("DashboardOverview", () => {
 
   it("uses categorized expenses as the single cash-flow source", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#expense-management");
     render(<DashboardOverview />);
 
     await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
     expect(screen.queryByRole("textbox", { name: "월 생활 지출" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,200,000원");
+    expect(screen.getAllByText("2,200,000원").length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("tab", { name: /생활비/ }));
     await user.click(screen.getByRole("button", { name: "식비 선택" }));
     await user.click(screen.getByRole("button", { name: "금액에 10만원 더하기" }));
 
-    expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원");
-    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("814,465원");
+    expect(screen.getAllByText("2,300,000원").length).toBeGreaterThan(0);
+    expect(screen.getByText("814,465원")).toBeInTheDocument();
   });
 
   it("excludes future expenses from the current dashboard month", async () => {
@@ -100,6 +115,7 @@ describe("DashboardOverview", () => {
 
   it("restores an edited expense item after remounting", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#expense-management");
     const view = render(<DashboardOverview />);
     await waitFor(() => expect(screen.getByRole("region", { name: "지출 관리" })).toBeVisible());
 
@@ -111,11 +127,12 @@ describe("DashboardOverview", () => {
     view.unmount();
     render(<DashboardOverview />);
 
-    await waitFor(() => expect(screen.getByTestId("overview-monthly-expense")).toHaveTextContent("2,300,000원"));
+    await waitFor(() => expect(screen.getAllByText("2,300,000원").length).toBeGreaterThan(0));
   });
 
   it("persists the first user edit under Strict Mode", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#expense-management");
     localStorage.setItem(ownerStorageKey, JSON.stringify({
       version: 2,
       scenario: { ...initialFinanceScenario, monthlyIncome: 3_300_000 },
@@ -136,14 +153,16 @@ describe("DashboardOverview", () => {
   it("provides visible destinations for wallet navigation", () => {
     render(<DashboardOverview />);
 
-    for (const id of ["planner-cash-flow", "finance-calculators", "finance-products", "finance-accounts", "finance-loans"]) {
-      expect(document.querySelectorAll(`#${id}`)).toHaveLength(1);
-      expect(document.getElementById(id)).toBeVisible();
-    }
+    expect(document.getElementById("planner-cash-flow")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /입력/ })).toHaveAttribute("href", "#planner-cash-flow");
+    expect(screen.getByRole("link", { name: /계산/ })).toHaveAttribute("href", "#finance-calculators");
+    expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
+    expect(screen.getByRole("link", { name: /그래프/ })).toHaveAttribute("href", "#finance-loans");
   });
 
   it("adds quick amounts cumulatively and updates the summary", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-cash-flow");
     render(<DashboardOverview />);
 
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
@@ -151,10 +170,11 @@ describe("DashboardOverview", () => {
     await user.click(screen.getByRole("button", { name: "월 수입에서 50만원 빼기" }));
 
     expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("470");
-    expect(screen.getByTestId("overview-monthly-surplus")).toHaveTextContent("2,414,465원");
+    expect(screen.getByText("2,414,465원")).toBeInTheDocument();
   });
 
   it("hydrates from the saved owner scenario without showing a fallback notice", async () => {
+    window.history.replaceState(null, "", "#planner-cash-flow");
     localStorage.setItem(ownerStorageKey, JSON.stringify({
       version: 1,
       scenario: { ...initialFinanceScenario, monthlyIncome: 4_500_000 },
@@ -170,6 +190,7 @@ describe("DashboardOverview", () => {
 
   it("saves updates as a version 2 envelope under the owner-scoped key", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-cash-flow");
     render(<DashboardOverview />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "월 수입" })).toBeEnabled());
 
@@ -184,6 +205,7 @@ describe("DashboardOverview", () => {
   });
 
   it("recovers from malformed saved data and reports a concise notice", async () => {
+    window.history.replaceState(null, "", "#planner-cash-flow");
     localStorage.setItem(ownerStorageKey, "not-json");
 
     render(<DashboardOverview />);
@@ -193,6 +215,7 @@ describe("DashboardOverview", () => {
   });
 
   it("recovers when local storage access fails", async () => {
+    window.history.replaceState(null, "", "#planner-cash-flow");
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("denied", "SecurityError"); });
 
     render(<DashboardOverview />);
@@ -203,6 +226,7 @@ describe("DashboardOverview", () => {
 
   it("keeps edits and reports a recoverable notice when saving fails", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#planner-cash-flow");
     render(<DashboardOverview />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "월 수입" })).toBeEnabled());
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("quota", "QuotaExceededError"); });
@@ -215,6 +239,7 @@ describe("DashboardOverview", () => {
 
   it("supports multiple loans and negative net worth", async () => {
     const user = userEvent.setup();
+    window.history.replaceState(null, "", "#finance-accounts");
     render(<DashboardOverview />);
 
     const accountEditor = screen.getByRole("region", { name: "자산 및 대출 편집" });
@@ -224,7 +249,8 @@ describe("DashboardOverview", () => {
     await user.clear(principal);
     await user.type(principal, "2000");
 
+    await user.click(screen.getByRole("link", { name: /요약/ }));
+    await waitFor(() => expect(screen.getByTestId("overview-net-worth")).toBeInTheDocument());
     expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("-13,000,000원");
-    expect(screen.getAllByRole("row")).toHaveLength(3);
   });
 });

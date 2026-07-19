@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChartNoAxesCombined, Home, Landmark, WalletCards } from "lucide-react";
+import { Calculator, ChartNoAxesCombined, Home, WalletCards } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 const navItems = [
@@ -11,10 +11,10 @@ const navItems = [
 ];
 
 const bottomNavItems = [
-  { label: "홈", href: "/", icon: Home },
-  { label: "계산", href: "#finance-calculators", icon: WalletCards },
-  { label: "계좌", href: "#finance-accounts", icon: Landmark },
-  { label: "대출", href: "#finance-loans", icon: ChartNoAxesCombined },
+  { label: "홈", href: "/", icon: Home, hashes: [""] },
+  { label: "입력", href: "#planner-cash-flow", icon: WalletCards, hashes: ["#planner-cash-flow", "#expense-management", "#finance-accounts"] },
+  { label: "계산", href: "#finance-calculators", icon: Calculator, hashes: ["#finance-calculators"] },
+  { label: "그래프", href: "#finance-loans", icon: ChartNoAxesCombined, hashes: ["#finance-loans"] },
 ];
 
 type AppShellProps = {
@@ -76,7 +76,7 @@ export function AppShell({ children }: AppShellProps) {
       >
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
-          const isCurrent = item.href === "/" ? activeHash === "" : item.href === activeHash;
+          const isCurrent = item.hashes.includes(activeHash);
 
           return (
             <Link
