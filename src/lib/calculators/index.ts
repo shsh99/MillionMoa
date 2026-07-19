@@ -41,6 +41,14 @@ export {
   type MonthlyContributionTotal,
 } from "./contribution-source-ledger";
 export {
+  calculateInstallmentMaturity,
+  calculateIsaTaxBenefit,
+  type InstallmentMaturityInput,
+  type InstallmentMaturityResult,
+  type IsaTaxBenefitInput,
+  type IsaTaxBenefitResult,
+} from "./financial-products";
+export {
   calculateMonthsToGoal,
   type GoalTimelineInput,
   type GoalTimelineResult,
