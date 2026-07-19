@@ -41,6 +41,10 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("region", { name: "사회초년생 시작 체크" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "이번 달 시작 체크" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "대시보드 카테고리" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "월 수입 사용 비율" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "내 금융 계좌" })).toBeInTheDocument();
+    expect(screen.getByText("생활비 파킹통장")).toBeInTheDocument();
+    expect(screen.getByText("학자금 대출")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /실수령액 확인/ })).toHaveAttribute("href", "#finance-calculators");
     expect(screen.getByRole("link", { name: /고정비 점검/ })).toHaveAttribute("href", "#expense-management");
     expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
@@ -53,10 +57,7 @@ describe("DashboardOverview", () => {
       "bg-[#4f46a5]",
       "text-white",
     );
-    expect(within(screen.getByRole("navigation", { name: "대시보드 카테고리" })).getByRole("link", { name: /요약/ })).toHaveClass(
-      "bg-[var(--wallet-primary-soft)]",
-      "text-[var(--wallet-primary-strong)]",
-    );
+    expect(within(screen.getByRole("navigation", { name: "대시보드 카테고리" })).getByRole("link", { name: /요약/ })).toHaveClass("bg-[var(--wallet-primary)]", "text-white");
     expect(screen.queryByRole("region", { name: "자산 및 대출 편집" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "지출 관리" })).not.toBeInTheDocument();
@@ -225,10 +226,11 @@ describe("DashboardOverview", () => {
     render(<DashboardOverview />);
 
     expect(document.getElementById("planner-cash-flow")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /입력/ })).toHaveAttribute("href", "#planner-cash-flow");
-    expect(screen.getByRole("link", { name: /계산/ })).toHaveAttribute("href", "#finance-calculators");
-    expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
-    expect(screen.getByRole("link", { name: /그래프/ })).toHaveAttribute("href", "#finance-loans");
+    const categoryNav = screen.getByRole("navigation", { name: "대시보드 카테고리" });
+    expect(within(categoryNav).getByRole("link", { name: /입력/ })).toHaveAttribute("href", "#planner-cash-flow");
+    expect(within(categoryNav).getByRole("link", { name: /계산/ })).toHaveAttribute("href", "#finance-calculators");
+    expect(within(categoryNav).getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
+    expect(within(categoryNav).getByRole("link", { name: /그래프/ })).toHaveAttribute("href", "#finance-loans");
   });
 
   it("adds quick amounts cumulatively and updates the summary", async () => {
