@@ -39,10 +39,10 @@ describe("DashboardOverview", () => {
 
     expect(screen.getByRole("heading", { name: "1억을 향한 자산 지도" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "사회초년생 시작 체크" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "이번 달 시작 체크" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "이번 달 할 일" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "대시보드 카테고리" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "월 수입 사용 비율" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "내 금융 계좌" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "계좌와 대출" })).toBeInTheDocument();
     expect(screen.getByText("생활비 파킹통장")).toBeInTheDocument();
     expect(screen.getByText("학자금 대출")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /실수령액 확인/ })).toHaveAttribute("href", "#finance-calculators");
@@ -61,6 +61,18 @@ describe("DashboardOverview", () => {
     expect(screen.queryByRole("region", { name: "자산 및 대출 편집" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "지출 관리" })).not.toBeInTheDocument();
+  });
+
+  it("uses Korean banking copy and soft consumer-finance surfaces on the overview", () => {
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
+
+    expect(screen.getByRole("heading", { name: "이번 달 할 일" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "월급 흐름" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "계좌와 대출" })).toBeInTheDocument();
+    expect(screen.queryByText("NEXT ACTION")).not.toBeInTheDocument();
+    expect(screen.queryByText("MONEY FLOW")).not.toBeInTheDocument();
+    expect(screen.queryByText("MY ACCOUNTS")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "자산 요약" })).toHaveClass("rounded-[34px]");
   });
 
   it("switches category panels from hash links instead of stacking every section", async () => {

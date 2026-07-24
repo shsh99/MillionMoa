@@ -177,19 +177,19 @@ function StarterChecklist({ scenario }: { scenario: ReturnType<typeof calculateF
   };
 
   return (
-    <section aria-label="사회초년생 시작 체크" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+    <section aria-label="사회초년생 시작 체크" className="rounded-[32px] border border-[#e9edf5] bg-[var(--wallet-surface)] p-5 shadow-[0_18px_42px_rgba(70,82,118,0.08)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold text-[var(--wallet-primary)]">NEXT ACTION</p>
-          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="starter-check-title">이번 달 시작 체크</h2>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">오늘 먼저 볼 것</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="starter-check-title">이번 달 할 일</h2>
           <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[var(--wallet-muted)]">{starter.status.headline}. {starter.status.detail}</p>
         </div>
         <span className={`inline-flex h-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${statusToneClass}`}>{starter.status.label}</span>
       </div>
-      <div className="mt-5 grid gap-x-5 border-t border-[var(--wallet-line)] sm:grid-cols-2">
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
         {starter.actions.map((action) => (
-          <a key={action.label} href={action.href} className="group flex min-h-[76px] items-center gap-3 border-b border-[var(--wallet-line)] py-3 transition-colors hover:text-[var(--wallet-primary)] active:bg-[var(--wallet-primary-soft)]">
-            <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${actionToneClass[action.tone]}`}>{action.icon}</span>
+          <a key={action.label} href={action.href} className="group flex min-h-[78px] items-center gap-3 rounded-[22px] border border-transparent bg-[var(--wallet-surface-tint)] px-3 py-3 transition-[background-color,border-color,transform] hover:border-[var(--wallet-primary-soft)] hover:bg-white active:scale-[0.98]">
+            <span className={`grid size-11 shrink-0 place-items-center rounded-[18px] ${actionToneClass[action.tone]}`}>{action.icon}</span>
             <span className="min-w-0 flex-1"><strong className="block text-sm font-extrabold text-[var(--wallet-ink)]">{action.label}</strong><span className="mt-1 block text-xs font-medium leading-5 text-[var(--wallet-muted)]">{action.detail}</span></span>
             <ArrowRight aria-hidden="true" className="shrink-0 text-[var(--wallet-muted)] transition-transform group-hover:translate-x-0.5" size={17} />
           </a>
@@ -233,11 +233,11 @@ function MonthlyFlowOverview({ scenario }: { scenario: ReturnType<typeof calcula
   const loanEnd = expensePercent + loanPercent;
 
   return (
-    <section aria-labelledby="monthly-flow-title" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+    <section aria-labelledby="monthly-flow-title" className="rounded-[32px] border border-[#e9edf5] bg-[var(--wallet-surface)] p-5 shadow-[0_18px_42px_rgba(70,82,118,0.08)] sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-[var(--wallet-primary)]">MONEY FLOW</p>
-          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="monthly-flow-title">이번 달 흐름</h2>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">월급 사용 비율</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="monthly-flow-title">월급 흐름</h2>
         </div>
         <a className="grid size-10 place-items-center rounded-full bg-[var(--wallet-surface-tint)] text-[var(--wallet-muted)] hover:text-[var(--wallet-primary)]" href="#planner-cash-flow" aria-label="월 현금흐름 입력으로 이동">
           <ArrowRight aria-hidden="true" size={19} />
@@ -274,11 +274,11 @@ function MonthlyFlowOverview({ scenario }: { scenario: ReturnType<typeof calcula
 
 function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
   return (
-    <section aria-labelledby="account-snapshot-title" className="rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-5 shadow-[var(--wallet-shadow)] sm:p-6">
+    <section aria-labelledby="account-snapshot-title" className="rounded-[32px] border border-[#e9edf5] bg-[var(--wallet-surface)] p-5 shadow-[0_18px_42px_rgba(70,82,118,0.08)] sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-[var(--wallet-primary)]">MY ACCOUNTS</p>
-          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="account-snapshot-title">내 금융 계좌</h2>
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">보유 중인 돈</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="account-snapshot-title">계좌와 대출</h2>
         </div>
         <a className="text-xs font-extrabold text-[var(--wallet-primary)] hover:underline" href="#finance-accounts">전체 관리</a>
       </div>
@@ -411,7 +411,7 @@ function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCatego
 
   return (
     <nav aria-label="대시보드 카테고리" className="sticky top-24 hidden self-start rounded-[28px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-3 shadow-[var(--wallet-shadow)] md:block">
-      <p className="px-3 pb-2 pt-1 text-[11px] font-black uppercase text-[var(--wallet-muted)]">Money menu</p>
+      <p className="px-3 pb-2 pt-1 text-[11px] font-black text-[var(--wallet-muted)]">돈 관리 메뉴</p>
       <div className="grid gap-1.5">
         {items.map((item) => (
           <a
@@ -572,8 +572,8 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
 
         {activeCategory === "overview" && (
           <>
-            <section aria-label="자산 요약" className="overflow-hidden rounded-[30px] border border-[#dfe2ff] bg-[var(--wallet-surface)] text-[var(--wallet-ink)] shadow-[0_18px_45px_rgba(55,62,135,0.10)]">
-              <div className="bg-[var(--wallet-primary-soft)] p-5 sm:p-7">
+            <section aria-label="자산 요약" className="overflow-hidden rounded-[34px] border border-[#dde9f0] bg-[var(--wallet-surface)] text-[var(--wallet-ink)] shadow-[0_24px_58px_rgba(57,73,109,0.12)]">
+              <div className="bg-[linear-gradient(145deg,#f3f7ff_0%,#effcf8_48%,#fff7f0_100%)] p-5 sm:p-7">
                 <div className="flex items-center justify-between gap-3"><p className="text-sm font-extrabold text-[var(--wallet-primary-strong)]">나의 순자산</p><span className="grid size-11 place-items-center rounded-[18px] bg-[var(--wallet-primary)] text-white shadow-[0_8px_18px_rgba(79,91,213,0.2)]"><Target aria-hidden="true" size={21} /></span></div>
                 <p aria-live="polite" className={`mt-3 break-words text-[2.25rem] font-black leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${scenario.netWorth < 0 ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-ink)]"}`} data-testid="overview-net-worth">{formatCurrency(scenario.netWorth)}</p>
                 <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/80" role="progressbar" aria-label={isNetWorthNegative ? "부채 초과 상태" : "1억 목표 달성률"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}><div className="h-full rounded-full bg-[var(--wallet-primary)] transition-[width] motion-reduce:transition-none" style={{ width: `${isNetWorthNegative ? 0 : progressPercent}%` }} /></div>
