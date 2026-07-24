@@ -25,7 +25,7 @@ describe("ExpenseManagementEditor", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(3);
     expect(screen.getByRole("tab", { name: /고정비/ })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("570,000원")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /고정비/ })).toHaveTextContent("57만");
 
     await user.click(screen.getByRole("tab", { name: /생활비/ }));
     expect(screen.getByRole("tab", { name: /생활비/ })).toHaveAttribute("aria-selected", "true");

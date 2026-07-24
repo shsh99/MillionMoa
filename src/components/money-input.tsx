@@ -223,7 +223,7 @@ export function MoneyInput({
           id={id}
           name={id}
           type="text"
-          inputMode="numeric"
+          inputMode={allowNegative ? "decimal" : "numeric"}
           autoComplete="off"
           aria-describedby={`${id}-unit${showPreview ? ` ${id}-preview` : ""}${pastedAmount ? ` ${id}-paste-choice` : ""}${pasteError ? ` ${id}-paste-error` : ""}`}
           className="min-h-11 min-w-0 flex-1 bg-transparent text-right text-base font-bold tabular-nums text-[var(--wallet-ink)] outline-none"

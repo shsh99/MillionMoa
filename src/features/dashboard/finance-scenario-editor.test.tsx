@@ -106,6 +106,21 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByRole("button", { name: "자산 계좌 잔액에 500만원 더하기" })).toBeInTheDocument();
   });
 
+  it("allows a negative asset balance for overdraft style accounts", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    const balance = screen.getByRole("textbox", { name: "자산 계좌 잔액" });
+    await user.clear(balance);
+    await user.type(balance, "-50");
+
+    expect(balance).toHaveValue("-50");
+    expect(onChange.mock.calls.at(-1)?.[0].assets[0].balance).toBe(-500_000);
+    expect(screen.getByRole("button", { name: "자산 계좌 잔액 부호 전환" })).toBeInTheDocument();
+  });
+
   it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
     const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({

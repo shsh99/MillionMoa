@@ -4,23 +4,23 @@
 
 :root {
   color-scheme: light;
-  --wallet-page: #f5f6fa;
+  --wallet-page: #f3f7fb;
   --wallet-surface: #ffffff;
-  --wallet-surface-tint: #f8f8fc;
-  --wallet-ink: #202236;
-  --wallet-muted: #73768a;
-  --wallet-line: #e6e7ef;
-  --wallet-primary: #4f5bd5;
-  --wallet-primary-strong: #3d48bd;
-  --wallet-primary-soft: #eef0ff;
-  --wallet-primary-subtle: #e3e6ff;
-  --wallet-mint: #2eb99d;
-  --wallet-mint-soft: #e8f8f4;
-  --wallet-coral: #e06470;
-  --wallet-coral-soft: #fff0f2;
-  --wallet-warning: #b7791f;
+  --wallet-surface-tint: #f6f9fd;
+  --wallet-ink: #151b2d;
+  --wallet-muted: #667085;
+  --wallet-line: #e3eaf2;
+  --wallet-primary: #3182f6;
+  --wallet-primary-strong: #1f6ed4;
+  --wallet-primary-soft: #eaf3ff;
+  --wallet-primary-subtle: #dcecff;
+  --wallet-mint: #26c6a3;
+  --wallet-mint-soft: #e7f9f4;
+  --wallet-coral: #e55f6d;
+  --wallet-coral-soft: #fff0f3;
+  --wallet-warning: #c48714;
   --wallet-warning-soft: #fff7df;
-  --wallet-shadow: 0 1px 2px rgba(43, 45, 76, 0.04), 0 12px 32px rgba(43, 45, 76, 0.07);
+  --wallet-shadow: 0 1px 2px rgba(20, 36, 64, 0.04), 0 16px 40px rgba(20, 36, 64, 0.07);
   --money-ink: var(--wallet-ink);
   --money-muted: var(--wallet-muted);
   --money-line: var(--wallet-line);

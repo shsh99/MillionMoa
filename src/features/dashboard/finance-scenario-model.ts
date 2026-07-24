@@ -54,6 +54,7 @@ export type FinanceScenarioInput = {
 };
 
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
+const signedKrwIntegerSchema = z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER);
 const isoDateSchema = z.string().refine((value) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -98,7 +99,7 @@ const assetAccountSchema = z.object({
     "deposit-bond",
     "other",
   ]),
-  balance: nonNegativeIntegerSchema,
+  balance: signedKrwIntegerSchema,
   annualRate: z.number().min(-1).max(1).optional(),
   monthlyContribution: nonNegativeIntegerSchema.optional(),
   maturityMonth: nonNegativeIntegerSchema.optional(),
@@ -220,7 +221,9 @@ function validateScenario(input: FinanceScenarioInput) {
   assertNonNegativeKrw(input.monthlyNonLoanExpense, "monthly non-loan expense");
   expenseItemSchema.array().max(500).parse(input.expenses);
   for (const asset of input.assets) {
-    assertNonNegativeKrw(asset.balance, "asset balance");
+    if (!Number.isFinite(asset.balance) || !Number.isInteger(asset.balance)) {
+      throw new RangeError("asset balance must be an integer KRW amount");
+    }
     const annualRate = asset.annualRate ?? 0;
     if (!Number.isFinite(annualRate) || annualRate < -1 || annualRate > 1) {
       throw new RangeError("asset annualRate must be between -1 and 1");
