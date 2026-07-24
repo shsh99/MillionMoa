@@ -9,7 +9,7 @@ import {
   Trash2,
   WalletCards,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { MoneyInput } from "../../components/money-input";
 import type {
   AssetAccount,
@@ -65,6 +65,86 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputClass = "h-12 w-full rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-base font-semibold text-[var(--wallet-ink)] shadow-sm outline-none focus:border-[var(--wallet-primary)] focus:ring-2 focus:ring-[var(--wallet-primary-soft)]";
+
+function formatDraftNumber(value: number) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(4)));
+}
+
+function DraftNumberField({
+  label,
+  name,
+  value,
+  min,
+  max,
+  step,
+  inputMode,
+  errorMessage,
+  onCommit,
+}: {
+  label: string;
+  name: string;
+  value: number;
+  min: number;
+  max: number;
+  step: string | number;
+  inputMode: "decimal" | "numeric";
+  errorMessage: string;
+  onCommit: (value: number) => void;
+}) {
+  const generatedId = useId();
+  const inputId = `${name}-${generatedId}`;
+  const errorId = `${inputId}-error`;
+  const [draft, setDraft] = useState(formatDraftNumber(value));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(formatDraftNumber(value));
+    setError(null);
+  }, [value]);
+
+  const commitDraft = () => {
+    if (draft.trim() === "") {
+      setError(errorMessage);
+      return;
+    }
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed) || parsed < min) {
+      setError(errorMessage);
+      return;
+    }
+    const next = Math.min(max, parsed);
+    setError(null);
+    setDraft(formatDraftNumber(next));
+    if (next !== value) onCommit(next);
+  };
+
+  return (
+    <label className="block space-y-2 text-sm font-semibold text-[var(--wallet-ink)]" htmlFor={inputId}>
+      <span>{label}</span>
+      <input
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
+        aria-label={label}
+        autoComplete="off"
+        className={inputClass}
+        id={inputId}
+        inputMode={inputMode}
+        max={max}
+        min={min}
+        name={name}
+        onBlur={commitDraft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setError(null);
+        }}
+        step={step}
+        type="number"
+        value={draft}
+      />
+      {error && <p className="text-xs font-bold text-[var(--wallet-coral)]" id={errorId}>{error}</p>}
+    </label>
+  );
+}
 
 export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }: Props) {
   const [internalMode, setInternalMode] = useState<"assets" | "loans">("assets");
@@ -270,8 +350,28 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
                 </div>
                 <MoneyInput id={`loan-${selectedLoan.id}-principal`} label="대출 원금" value={selectedLoan.principal} onChange={(principal) => updateLoan({ principal })} />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="연 금리 (%)"><input aria-label="대출 연 금리" autoComplete="off" className={inputClass} name="loan-annual-rate" type="number" inputMode="decimal" min={0} max={100} step="0.1" value={selectedLoan.annualRate * 100} onChange={(e) => { const rate = Number(e.target.value); updateLoan({ annualRate: Number.isFinite(rate) ? Math.max(0, Math.min(100, rate)) / 100 : 0 }); }} /></Field>
-                  <Field label="남은 기간 (개월)"><input aria-label="대출 남은 개월" autoComplete="off" className={inputClass} name="loan-remaining-months" type="number" inputMode="numeric" min={1} max={1200} step={1} value={selectedLoan.remainingMonths} onChange={(e) => updateLoan({ remainingMonths: Math.max(1, Math.min(1200, Math.round(Number(e.target.value) || 1))) })} /></Field>
+                  <DraftNumberField
+                    errorMessage="연 금리는 0%부터 100% 사이여야 합니다."
+                    inputMode="decimal"
+                    label="대출 연 금리"
+                    max={100}
+                    min={0}
+                    name="loan-annual-rate"
+                    onCommit={(rate) => updateLoan({ annualRate: rate / 100 })}
+                    step="0.1"
+                    value={selectedLoan.annualRate * 100}
+                  />
+                  <DraftNumberField
+                    errorMessage="남은 기간은 1개월부터 1200개월 사이여야 합니다."
+                    inputMode="numeric"
+                    label="대출 남은 개월"
+                    max={1200}
+                    min={1}
+                    name="loan-remaining-months"
+                    onCommit={(months) => updateLoan({ remainingMonths: Math.round(months) })}
+                    step={1}
+                    value={selectedLoan.remainingMonths}
+                  />
                 </div>
                 <fieldset><legend className="mb-2 text-sm font-semibold text-[var(--wallet-ink)]">상환 방식</legend><div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="상환 방식">{repaymentMethods.map((method) => <label key={method.value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border px-2 text-center text-sm font-bold ${selectedLoan.repaymentMethod === method.value ? "border-[var(--wallet-coral)] bg-[var(--wallet-coral-soft)] text-[#9a4f58]" : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-muted)]"}`}><input className="sr-only" type="radio" name={`repayment-${selectedLoan.id}`} value={method.value} checked={selectedLoan.repaymentMethod === method.value} onChange={() => updateLoan({ repaymentMethod: method.value })} />{method.label}</label>)}</div></fieldset>
                 <button type="button" aria-label="선택한 대출 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={deleteLoan}><Trash2 className="size-4" aria-hidden="true" />대출 삭제</button>
