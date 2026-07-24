@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 const bottomNavItems = [
   { label: "홈", href: "/", icon: Home, hashes: ["", "#dashboard-overview-title"] },
-  { label: "입력", href: "#planner-cash-flow", icon: WalletCards, hashes: ["#planner-cash-flow", "#expense-management", "#finance-accounts"] },
+  { label: "입력", href: "#planner-cash-flow", icon: WalletCards, hashes: ["#planner-cash-flow", "#expense-management", "#finance-accounts", "#finance-assets", "#finance-loans-input"] },
   { label: "계산", href: "#finance-calculators", icon: Calculator, hashes: ["#finance-calculators"] },
   { label: "상품", href: "#finance-products", icon: Sparkles, hashes: ["#finance-products"] },
   { label: "그래프", href: "#finance-loans", icon: ChartNoAxesCombined, hashes: ["#finance-loans"] },

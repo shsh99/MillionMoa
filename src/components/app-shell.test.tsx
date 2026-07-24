@@ -101,6 +101,17 @@ describe("AppShell", () => {
     );
 
     act(() => {
+      window.history.replaceState(null, "", "#finance-loans-input");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    expect(await screen.findByRole("button", { name: "대출 추가" })).toBeVisible();
+    expect(within(mobileNav).getByRole("link", { name: "입력" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    act(() => {
       window.history.replaceState(null, "", "#finance-loans");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
