@@ -214,7 +214,38 @@ describe("FinanceScenarioEditor", () => {
     expect(within(methodGroup).getByRole("radio", { name: "원금균등" })).toBeChecked();
   });
 
-  it("clamps loan terms and rates to the supported model boundary", async () => {
+  it("keeps invalid loan rate and term drafts local until blur validation", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor mode="loans" onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    onChange.mockClear();
+
+    const months = screen.getByLabelText("대출 남은 개월");
+    await user.clear(months);
+    expect(months).toHaveValue(null);
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.tab();
+    expect(screen.getByText("남은 기간은 1개월부터 1200개월 사이여야 합니다.")).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.type(months, "24");
+    await user.tab();
+    expect(onChange.mock.calls.at(-1)?.[0].loans[0].remainingMonths).toBe(24);
+    expect(screen.queryByText("남은 기간은 1개월부터 1200개월 사이여야 합니다.")).not.toBeInTheDocument();
+
+    const rate = screen.getByLabelText("대출 연 금리");
+    await user.clear(rate);
+    await user.type(rate, "-1");
+    expect(onChange.mock.calls.at(-1)?.[0].loans[0].annualRate).toBe(0);
+
+    await user.tab();
+    expect(screen.getByText("연 금리는 0%부터 100% 사이여야 합니다.")).toBeInTheDocument();
+    expect(onChange.mock.calls.at(-1)?.[0].loans[0].annualRate).toBe(0);
+  });
+
+  it("clamps loan terms and rates to the supported model boundary on blur", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);
     await user.click(screen.getByRole("tab", { name: "대출" }));
@@ -222,8 +253,10 @@ describe("FinanceScenarioEditor", () => {
 
     await user.clear(screen.getByLabelText("대출 남은 개월"));
     await user.type(screen.getByLabelText("대출 남은 개월"), "10000");
+    await user.tab();
     await user.clear(screen.getByLabelText("대출 연 금리"));
     await user.type(screen.getByLabelText("대출 연 금리"), "150");
+    await user.tab();
 
     expect(screen.getByLabelText("대출 남은 개월")).toHaveValue(1200);
     expect(screen.getByLabelText("대출 연 금리")).toHaveValue(100);
