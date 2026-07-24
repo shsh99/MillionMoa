@@ -400,6 +400,78 @@ function MoneyWorkspaceHeader({
   );
 }
 
+function InputWorkspaceSummary({
+  input,
+  scenario,
+  saveStatus,
+}: {
+  input: FinanceScenarioInput;
+  scenario: ReturnType<typeof calculateFinanceScenario>;
+  saveStatus: SaveStatus;
+}) {
+  const saveLabel = saveStatus === "failed" ? "저장 실패" : saveStatus === "dirty" ? "저장 필요" : "저장됨";
+  const summaryItems = [
+    {
+      label: "월 여유금",
+      value: formatShortMoney(scenario.rawMonthlySurplus),
+      detail: scenario.rawMonthlySurplus < 0 ? "이번 달 부족" : "상환 후 남는 돈",
+      href: "#planner-cash-flow",
+      icon: <WalletCards aria-hidden="true" size={18} strokeWidth={1.9} />,
+      tone: scenario.rawMonthlySurplus < 0 ? "coral" : "mint",
+    },
+    {
+      label: "총 자산",
+      value: formatShortMoney(scenario.totalAssetBalances),
+      detail: `${input.assets.length}개 계좌`,
+      href: "#finance-assets",
+      icon: <Landmark aria-hidden="true" size={18} strokeWidth={1.9} />,
+      tone: "blue",
+    },
+    {
+      label: "대출 원금",
+      value: formatShortMoney(scenario.totalLoanPrincipals),
+      detail: `${input.loans.length}건 관리`,
+      href: "#finance-loans-input",
+      icon: <Building2 aria-hidden="true" size={18} strokeWidth={1.9} />,
+      tone: "coral",
+    },
+    {
+      label: "저장 상태",
+      value: saveLabel,
+      detail: saveStatus === "failed" ? "재시도 필요" : "이 기기에 보관",
+      href: "#planner-cash-flow",
+      icon: <ShieldCheck aria-hidden="true" size={18} strokeWidth={1.9} />,
+      tone: saveStatus === "failed" ? "coral" : "mint",
+    },
+  ];
+  const toneClass = {
+    blue: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    mint: "bg-[var(--wallet-mint-soft)] text-[#0c7d67]",
+    coral: "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]",
+  };
+
+  return (
+    <section aria-label="입력 요약" className="grid gap-2 rounded-[26px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-2 shadow-[var(--wallet-shadow)] sm:grid-cols-2 xl:grid-cols-4">
+      {summaryItems.map((item) => (
+        <a
+          aria-label={`${item.label} ${item.value} ${item.detail}`}
+          className="group flex min-h-[5.5rem] min-w-0 items-center gap-3 rounded-[22px] bg-[var(--wallet-surface-tint)] px-3 py-3 transition-[background-color,transform] hover:bg-white active:scale-[0.98]"
+          href={item.href}
+          key={item.label}
+        >
+          <span className={`grid size-11 shrink-0 place-items-center rounded-[18px] ${toneClass[item.tone as keyof typeof toneClass]}`}>{item.icon}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-extrabold text-[var(--wallet-muted)]">{item.label}</span>
+            <strong className={`mt-1 block truncate text-base font-black tabular-nums ${item.tone === "coral" && item.label !== "대출 원금" ? "text-[var(--wallet-coral)]" : "text-[var(--wallet-ink)]"}`}>{item.value}</strong>
+            <span className="mt-0.5 block truncate text-[11px] font-bold text-[var(--wallet-muted)]">{item.detail}</span>
+          </span>
+          <ArrowRight aria-hidden="true" className="shrink-0 text-[var(--wallet-muted)] transition-transform group-hover:translate-x-0.5" size={16} />
+        </a>
+      ))}
+    </section>
+  );
+}
+
 function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCategory }) {
   const items = [
     { category: "overview", label: "요약", detail: "현재 상태", href: "#dashboard-overview-title", icon: <Target size={17} strokeWidth={1.9} /> },
@@ -606,6 +678,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           <div className="grid gap-4">
             <MoneyWorkspaceNavigator activeWorkspace={activeMoneyWorkspace} />
             <MoneyWorkspaceHeader activeWorkspace={activeMoneyWorkspace} onRetry={retryPersistInput} onSave={saveCurrentInput} savedAt={savedAt} saveStatus={saveStatus} />
+            {hydrated ? <InputWorkspaceSummary input={input} scenario={scenario} saveStatus={saveStatus} /> : null}
 
             {activeMoneyWorkspace === "cash-flow" && (
               <section aria-labelledby="cash-flow-editor-title" className="scroll-mt-36 rounded-[22px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="planner-cash-flow">

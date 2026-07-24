@@ -251,6 +251,11 @@ describe("DashboardOverview", () => {
     render(<DashboardOverview />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "자산 계좌" })).toHaveFocus());
+    const inputSummary = screen.getByRole("region", { name: "입력 요약" });
+    expect(inputSummary).toBeInTheDocument();
+    expect(within(inputSummary).getByRole("link", { name: /총 자산/ })).toHaveAttribute("href", "#finance-assets");
+    expect(within(inputSummary).getByRole("link", { name: /대출 원금/ })).toHaveAttribute("href", "#finance-loans-input");
+    expect(within(inputSummary).getByText("저장 상태")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "자산 및 대출 편집" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "자산 계좌 추가" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "대출 추가" })).not.toBeInTheDocument();

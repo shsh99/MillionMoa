@@ -41,6 +41,14 @@ function formatWon(value: number) {
   return `${new Intl.NumberFormat("ko-KR").format(Math.round(value))}원`;
 }
 
+function formatShortWon(value: number) {
+  const rounded = Math.round(value);
+  const absolute = Math.abs(rounded);
+  const sign = rounded < 0 ? "-" : "";
+  if (absolute >= 100_000_000) return `${sign}${(absolute / 100_000_000).toFixed(1).replace(/\.0$/, "")}억`;
+  return `${sign}${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(absolute / 10_000)}만`;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -242,7 +250,7 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
               type="button"
             >
               <span className="block">{tab.label}</span>
-              <span className="block text-xs tabular-nums text-[var(--wallet-muted)]">{formatWon(subtotal)}</span>
+              <span className="block text-xs tabular-nums text-[var(--wallet-muted)]">{formatShortWon(subtotal)}</span>
             </button>
           );
         })}
@@ -264,8 +272,22 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
               {groupedItems.map((category) => (
                 <section aria-label={category.name} key={category.id}>
                   <div className="mb-1 flex items-center justify-between text-xs font-bold text-[var(--wallet-muted)]"><h4>{category.name}</h4><span className="tabular-nums">{formatWon(category.items.reduce((sum, item) => sum + calculateMonthlyExpenseEquivalent(item), 0))}</span></div>
-                  <div className="divide-y divide-[var(--wallet-line)] border-y border-[var(--wallet-line)]">
-                    {category.items.map((item) => <button aria-label={`${item.name} 선택`} aria-pressed={selected?.id === item.id} className={`flex min-h-11 w-full min-w-0 items-center justify-between gap-3 px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wallet-primary)] ${selected?.id === item.id ? "bg-[var(--wallet-primary-soft)]" : "hover:bg-[var(--wallet-surface-tint)]"}`} key={item.id} onClick={() => selectItem(item.id)} type="button"><span className="min-w-0 truncate text-sm font-bold text-[var(--wallet-ink)]">{item.name}</span><span className="shrink-0 text-sm font-bold tabular-nums text-[var(--wallet-muted)]">{formatWon(calculateMonthlyExpenseEquivalent(item))}</span></button>)}
+                  <div className="grid gap-2">
+                    {category.items.map((item) => {
+                      const monthly = calculateMonthlyExpenseEquivalent(item);
+                      return (
+                        <button aria-label={`${item.name} 선택`} aria-pressed={selected?.id === item.id} className={`flex min-h-[4.5rem] w-full min-w-0 items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition-[background-color,border-color,transform] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] ${selected?.id === item.id ? "border-[var(--wallet-primary)] bg-[var(--wallet-primary-soft)]" : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] hover:border-[var(--wallet-primary-soft)] hover:bg-[var(--wallet-surface-tint)]"}`} key={item.id} onClick={() => selectItem(item.id)} type="button">
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-black text-[var(--wallet-ink)]">{item.name}</span>
+                            <span className="mt-1 block text-xs font-bold text-[var(--wallet-muted)]">{frequencies.find((frequency) => frequency.id === item.frequency)?.label ?? "반복"} · {item.paymentDay ? `${item.paymentDay}일` : item.autoRenewal ? "자동 갱신" : "직접 관리"}</span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <strong className="block text-sm font-black tabular-nums text-[var(--wallet-ink)]">{formatShortWon(monthly)}</strong>
+                            <span className="mt-1 block text-[11px] font-bold tabular-nums text-[var(--wallet-muted)]">{formatWon(monthly)}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               ))}

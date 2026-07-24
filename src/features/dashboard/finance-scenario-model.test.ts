@@ -77,6 +77,10 @@ describe("financeScenarioSchema", () => {
 
   it("accepts the current finance scenario contract at its boundaries", () => {
     expect(financeScenarioSchema.parse(validScenario)).toEqual(validScenario);
+    expect(financeScenarioSchema.parse({
+      ...validScenario,
+      assets: [{ ...validScenario.assets[0], balance: -500_000 }],
+    }).assets[0].balance).toBe(-500_000);
   });
 
   it.each([
@@ -226,6 +230,19 @@ describe("calculateFinanceScenario", () => {
         { loanId: "jeonse", firstMonthlyPayment: 40_000, totalInterest: 480_000 },
       ],
     });
+  });
+
+  it("keeps overdraft-like asset balances as signed net worth inputs", () => {
+    const result = calculateFinanceScenario({
+      assets: [{ ...assets[0], balance: -500_000 }],
+      loans: [],
+      monthlyIncome: 1_000_000,
+      monthlyNonLoanExpense: 0,
+      expenses: [],
+    });
+
+    expect(result.totalAssetBalances).toBe(-500_000);
+    expect(result.netWorth).toBe(-500_000);
   });
 
   it("derives monthly non-loan expense from recurring expense items", () => {

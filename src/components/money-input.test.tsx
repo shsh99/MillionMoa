@@ -398,13 +398,13 @@ describe("MoneyInput", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("provides an accessible sign toggle while retaining the numeric keypad mode", async () => {
+  it("provides an accessible sign toggle with a decimal-capable mobile keypad mode", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<ControlledMoneyInput initialValue={500_000} allowNegative onChange={onChange} />);
     const input = screen.getByRole("textbox", { name: "월급" });
 
-    expect(input).toHaveAttribute("inputmode", "numeric");
+    expect(input).toHaveAttribute("inputmode", "decimal");
     await user.click(screen.getByRole("button", { name: "월급 부호 전환" }));
     expect(onChange).toHaveBeenLastCalledWith(-500_000);
     expect(input).toHaveValue("-50");
