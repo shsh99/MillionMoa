@@ -271,6 +271,10 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(value.assets[0]?.id ?? null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(value.loans[0]?.id ?? null);
   const [removedStack, setRemovedStack] = useState<Array<{ kind: "asset"; item: AssetAccount; index: number } | { kind: "loan"; item: Loan; index: number }>>([]);
+  const [assetDetailsOpen, setAssetDetailsOpen] = useState(false);
+  const [loanDetailsOpen, setLoanDetailsOpen] = useState(false);
+  const [pendingFocusInputId, setPendingFocusInputId] = useState<string | null>(null);
+  const [pendingFocusInputName, setPendingFocusInputName] = useState<string | null>(null);
   const assetNameRef = useRef<HTMLInputElement>(null);
   const loanNameRef = useRef<HTMLInputElement>(null);
   const undoButtonRef = useRef<HTMLButtonElement>(null);
@@ -291,6 +295,18 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
     focusLoanNameRef.current = false;
     loanNameRef.current?.focus();
   }, [selectedLoan?.id]);
+
+  useEffect(() => {
+    if (!pendingFocusInputId) return;
+    focusInputById(pendingFocusInputId);
+    setPendingFocusInputId(null);
+  }, [pendingFocusInputId]);
+
+  useEffect(() => {
+    if (!pendingFocusInputName) return;
+    focusInputByName(pendingFocusInputName);
+    setPendingFocusInputName(null);
+  }, [pendingFocusInputName]);
 
   const updateAsset = (patch: Partial<AssetAccount>) => {
     if (!selectedAsset) return;
@@ -316,8 +332,9 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
       annualRate: 0,
       monthlyContribution: 0,
     };
-    focusAssetNameRef.current = true;
     setSelectedAssetId(asset.id);
+    setAssetDetailsOpen(false);
+    setPendingFocusInputId(`asset-${asset.id}-balance`);
     onChange({ ...value, assets: [...value.assets, asset] });
   };
 
@@ -334,6 +351,8 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
       }));
     if (starterAssets.length === 0) return;
     setSelectedAssetId(starterAssets[0].id);
+    setAssetDetailsOpen(false);
+    setPendingFocusInputId(`asset-${starterAssets[0].id}-balance`);
     onChange({ ...value, assets: [...value.assets, ...starterAssets] });
   };
 
@@ -347,8 +366,9 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
       remainingMonths: 12,
       repaymentMethod: "equal-payment",
     };
-    focusLoanNameRef.current = true;
     setSelectedLoanId(loan.id);
+    setLoanDetailsOpen(false);
+    setPendingFocusInputId(`loan-${loan.id}-principal`);
     onChange({ ...value, loans: [...value.loans, loan] });
   };
 
@@ -476,7 +496,10 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
                   <button
                     aria-label="월 납입 바로 입력"
                     className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[var(--wallet-primary-strong)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-                    onClick={() => focusInputById(`asset-${selectedAsset.id}-contribution`)}
+                    onClick={() => {
+                      setAssetDetailsOpen(true);
+                      setPendingFocusInputId(`asset-${selectedAsset.id}-contribution`);
+                    }}
                     type="button"
                   >
                     월 납입
@@ -499,15 +522,30 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
                     ))}
                   </div>
                 </section>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="계좌 이름"><input aria-label="자산 계좌 이름" autoComplete="off" className={inputClass} name="asset-name" ref={assetNameRef} value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
-                  <Field label="계좌 종류"><select aria-label="자산 계좌 종류" autoComplete="off" className={inputClass} name="asset-category" value={selectedAsset.category} onChange={(e) => updateAsset({ category: e.target.value as AssetAccountCategory })}>{assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
-                </div>
                 <MoneyInput id={`asset-${selectedAsset.id}-balance`} label="자산 계좌 잔액" value={selectedAsset.balance} onChange={(balance) => updateAsset({ balance })} allowNegative quickAmountMode="adjust" />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="연 수익률 (%)"><input aria-label="자산 연 수익률" autoComplete="off" className={inputClass} name="asset-annual-rate" type="number" inputMode="decimal" min={-100} max={100} step="0.1" value={(selectedAsset.annualRate ?? 0) * 100} onChange={(e) => { const rate = Number(e.target.value); updateAsset({ annualRate: Number.isFinite(rate) ? Math.max(-100, Math.min(100, rate)) / 100 : 0 }); }} /></Field>
-                  <MoneyInput id={`asset-${selectedAsset.id}-contribution`} label="월 납입" value={selectedAsset.monthlyContribution ?? 0} onChange={(monthlyContribution) => updateAsset({ monthlyContribution })} />
-                </div>
+                <button
+                  aria-controls={`asset-${selectedAsset.id}-details`}
+                  aria-expanded={assetDetailsOpen}
+                  aria-label={`자산 세부 조건 ${assetDetailsOpen ? "닫기" : "열기"}`}
+                  className="flex min-h-11 w-full items-center justify-between rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[var(--wallet-ink)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                  onClick={() => setAssetDetailsOpen((open) => !open)}
+                  type="button"
+                >
+                  세부 조건
+                  <span className="text-xs font-bold text-[var(--wallet-muted)]">{assetDetailsOpen ? "접기" : "열기"}</span>
+                </button>
+                {assetDetailsOpen && (
+                  <div className="space-y-4 rounded-[20px] bg-[var(--wallet-surface-tint)] p-3" id={`asset-${selectedAsset.id}-details`}>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="계좌 이름"><input aria-label="자산 계좌 이름" autoComplete="off" className={inputClass} name="asset-name" ref={assetNameRef} value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
+                      <Field label="계좌 종류"><select aria-label="자산 계좌 종류" autoComplete="off" className={inputClass} name="asset-category" value={selectedAsset.category} onChange={(e) => updateAsset({ category: e.target.value as AssetAccountCategory })}>{assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="연 수익률 (%)"><input aria-label="자산 연 수익률" autoComplete="off" className={inputClass} name="asset-annual-rate" type="number" inputMode="decimal" min={-100} max={100} step="0.1" value={(selectedAsset.annualRate ?? 0) * 100} onChange={(e) => { const rate = Number(e.target.value); updateAsset({ annualRate: Number.isFinite(rate) ? Math.max(-100, Math.min(100, rate)) / 100 : 0 }); }} /></Field>
+                      <MoneyInput id={`asset-${selectedAsset.id}-contribution`} label="월 납입" value={selectedAsset.monthlyContribution ?? 0} onChange={(monthlyContribution) => updateAsset({ monthlyContribution })} />
+                    </div>
+                  </div>
+                )}
                 <button type="button" aria-label="선택한 자산 계좌 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={deleteAsset}><Trash2 className="size-4" aria-hidden="true" />계좌 삭제</button>
               </div>
             ) : <EmptyState icon={Building2} text="등록한 자산 계좌가 없습니다" />}
@@ -532,7 +570,10 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
                   <button
                     aria-label="대출 금리 바로 입력"
                     className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[#9a4f58] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-                    onClick={() => focusInputByName("loan-annual-rate")}
+                    onClick={() => {
+                      setLoanDetailsOpen(true);
+                      setPendingFocusInputName("loan-annual-rate");
+                    }}
                     type="button"
                   >
                     금리 수정
@@ -555,36 +596,51 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
                     ))}
                   </div>
                 </section>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="대출 이름"><input aria-label="대출 이름" autoComplete="off" className={inputClass} name="loan-name" ref={loanNameRef} value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
-                  <Field label="대출 종류"><select aria-label="대출 종류" autoComplete="off" className={inputClass} name="loan-category" value={selectedLoan.category} onChange={(e) => updateLoan({ category: e.target.value as LoanCategory })}>{loanCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
-                </div>
                 <MoneyInput id={`loan-${selectedLoan.id}-principal`} label="대출 원금" value={selectedLoan.principal} onChange={(principal) => updateLoan({ principal })} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <DraftNumberField
-                    errorMessage="연 금리는 0%부터 100% 사이여야 합니다."
-                    inputMode="decimal"
-                    label="대출 연 금리"
-                    max={100}
-                    min={0}
-                    name="loan-annual-rate"
-                    onCommit={(rate) => updateLoan({ annualRate: rate / 100 })}
-                    step="0.1"
-                    value={selectedLoan.annualRate * 100}
-                  />
-                  <DraftNumberField
-                    errorMessage="남은 기간은 1개월부터 1200개월 사이여야 합니다."
-                    inputMode="numeric"
-                    label="대출 남은 개월"
-                    max={1200}
-                    min={1}
-                    name="loan-remaining-months"
-                    onCommit={(months) => updateLoan({ remainingMonths: Math.round(months) })}
-                    step={1}
-                    value={selectedLoan.remainingMonths}
-                  />
-                </div>
-                <fieldset><legend className="mb-2 text-sm font-semibold text-[var(--wallet-ink)]">상환 방식</legend><div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="상환 방식">{repaymentMethods.map((method) => <label key={method.value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border px-2 text-center text-sm font-bold ${selectedLoan.repaymentMethod === method.value ? "border-[var(--wallet-coral)] bg-[var(--wallet-coral-soft)] text-[#9a4f58]" : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-muted)]"}`}><input className="sr-only" type="radio" name={`repayment-${selectedLoan.id}`} value={method.value} checked={selectedLoan.repaymentMethod === method.value} onChange={() => updateLoan({ repaymentMethod: method.value })} />{method.label}</label>)}</div></fieldset>
+                <button
+                  aria-controls={`loan-${selectedLoan.id}-details`}
+                  aria-expanded={loanDetailsOpen}
+                  aria-label={`대출 세부 조건 ${loanDetailsOpen ? "닫기" : "열기"}`}
+                  className="flex min-h-11 w-full items-center justify-between rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[var(--wallet-ink)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                  onClick={() => setLoanDetailsOpen((open) => !open)}
+                  type="button"
+                >
+                  세부 조건
+                  <span className="text-xs font-bold text-[var(--wallet-muted)]">{loanDetailsOpen ? "접기" : "열기"}</span>
+                </button>
+                {loanDetailsOpen && (
+                  <div className="space-y-4 rounded-[20px] bg-[var(--wallet-surface-tint)] p-3" id={`loan-${selectedLoan.id}-details`}>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="대출 이름"><input aria-label="대출 이름" autoComplete="off" className={inputClass} name="loan-name" ref={loanNameRef} value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
+                      <Field label="대출 종류"><select aria-label="대출 종류" autoComplete="off" className={inputClass} name="loan-category" value={selectedLoan.category} onChange={(e) => updateLoan({ category: e.target.value as LoanCategory })}>{loanCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <DraftNumberField
+                        errorMessage="연 금리는 0%부터 100% 사이여야 합니다."
+                        inputMode="decimal"
+                        label="대출 연 금리"
+                        max={100}
+                        min={0}
+                        name="loan-annual-rate"
+                        onCommit={(rate) => updateLoan({ annualRate: rate / 100 })}
+                        step="0.1"
+                        value={selectedLoan.annualRate * 100}
+                      />
+                      <DraftNumberField
+                        errorMessage="남은 기간은 1개월부터 1200개월 사이여야 합니다."
+                        inputMode="numeric"
+                        label="대출 남은 개월"
+                        max={1200}
+                        min={1}
+                        name="loan-remaining-months"
+                        onCommit={(months) => updateLoan({ remainingMonths: Math.round(months) })}
+                        step={1}
+                        value={selectedLoan.remainingMonths}
+                      />
+                    </div>
+                    <fieldset><legend className="mb-2 text-sm font-semibold text-[var(--wallet-ink)]">상환 방식</legend><div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="상환 방식">{repaymentMethods.map((method) => <label key={method.value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border px-2 text-center text-sm font-bold ${selectedLoan.repaymentMethod === method.value ? "border-[var(--wallet-coral)] bg-[var(--wallet-coral-soft)] text-[#9a4f58]" : "border-[var(--wallet-line)] bg-[var(--wallet-surface)] text-[var(--wallet-muted)]"}`}><input className="sr-only" type="radio" name={`repayment-${selectedLoan.id}`} value={method.value} checked={selectedLoan.repaymentMethod === method.value} onChange={() => updateLoan({ repaymentMethod: method.value })} />{method.label}</label>)}</div></fieldset>
+                  </div>
+                )}
                 <button type="button" aria-label="선택한 대출 삭제" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-rose-700 hover:bg-rose-50" onClick={deleteLoan}><Trash2 className="size-4" aria-hidden="true" />대출 삭제</button>
               </div>
             ) : <EmptyState icon={BadgeDollarSign} text="등록한 대출이 없습니다" />}

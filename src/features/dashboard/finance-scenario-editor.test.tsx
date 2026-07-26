@@ -45,7 +45,7 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.queryByRole("button", { name: "자산 계좌 추가" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
-    expect(screen.getByLabelText("대출 이름")).toHaveFocus();
+    expect(screen.getByLabelText("대출 원금")).toHaveFocus();
   });
 
   it("keeps multiple loans independent in the controlled loan workspace", async () => {
@@ -53,9 +53,11 @@ describe("FinanceScenarioEditor", () => {
     render(<ControlledEditor mode="loans" />);
 
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.click(screen.getByRole("button", { name: "대출 세부 조건 열기" }));
     await user.clear(screen.getByLabelText("대출 이름"));
     await user.type(screen.getByLabelText("대출 이름"), "신용대출");
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.click(screen.getByRole("button", { name: "대출 세부 조건 열기" }));
     await user.clear(screen.getByLabelText("대출 이름"));
     await user.type(screen.getByLabelText("대출 이름"), "전세대출");
     await user.click(screen.getByRole("button", { name: "신용대출 대출 선택" }));
@@ -86,6 +88,7 @@ describe("FinanceScenarioEditor", () => {
     render(<ControlledEditor />);
 
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+    await user.click(screen.getByRole("button", { name: "자산 세부 조건 열기" }));
     await user.clear(screen.getByLabelText("자산 계좌 이름"));
     await user.type(screen.getByLabelText("자산 계좌 이름"), "생활비 통장");
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
@@ -104,6 +107,21 @@ describe("FinanceScenarioEditor", () => {
 
     expect(screen.getByLabelText("자산 계좌 잔액")).toHaveValue("150");
     expect(screen.getByRole("button", { name: "자산 계좌 잔액에 500만원 더하기" })).toBeInTheDocument();
+  });
+
+  it("keeps asset details collapsed until the user asks for them", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="assets" />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    const detailsButton = screen.getByRole("button", { name: "자산 세부 조건 열기" });
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("자산 계좌 이름")).not.toBeInTheDocument();
+
+    await user.click(detailsButton);
+
+    expect(screen.getByRole("button", { name: "자산 세부 조건 닫기" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("자산 계좌 이름")).toBeInTheDocument();
   });
 
   it("allows a negative asset balance for overdraft style accounts", async () => {
@@ -136,8 +154,7 @@ describe("FinanceScenarioEditor", () => {
       annualRate: 0.025,
       monthlyContribution: 0,
     });
-    expect(screen.getByLabelText("자산 계좌 이름")).toHaveValue("파킹통장");
-    expect(screen.getByLabelText("자산 계좌 종류")).toHaveValue("parking");
+    expect(screen.queryByLabelText("자산 계좌 이름")).not.toBeInTheDocument();
   });
 
   it("creates a starter asset set in one step for early-career users", async () => {
@@ -232,13 +249,14 @@ describe("FinanceScenarioEditor", () => {
 
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
 
-    expect(screen.getByLabelText("자산 계좌 이름")).toHaveFocus();
+    expect(screen.getByLabelText("자산 계좌 잔액")).toHaveFocus();
   });
 
   it("uses stable names and disables autocomplete for editable fields", async () => {
     const user = userEvent.setup();
     render(<ControlledEditor />);
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+    await user.click(screen.getByRole("button", { name: "자산 세부 조건 열기" }));
 
     expect(screen.getByLabelText("자산 계좌 이름")).toHaveAttribute("name", "asset-name");
     expect(screen.getByLabelText("자산 계좌 이름")).toHaveAttribute("autocomplete", "off");
@@ -251,6 +269,7 @@ describe("FinanceScenarioEditor", () => {
 
     await user.click(screen.getByRole("tab", { name: "대출" }));
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.click(screen.getByRole("button", { name: "대출 세부 조건 열기" }));
     const methodGroup = screen.getByRole("radiogroup", { name: "상환 방식" });
     await user.click(within(methodGroup).getByRole("radio", { name: "원금균등" }));
 
@@ -273,10 +292,23 @@ describe("FinanceScenarioEditor", () => {
       remainingMonths: 36,
       repaymentMethod: "equal-payment",
     });
-    expect(screen.getByLabelText("대출 이름")).toHaveValue("학자금 대출");
-    expect(screen.getByLabelText("대출 종류")).toHaveValue("student");
-    expect(screen.getByLabelText("대출 연 금리")).toHaveValue(1.7);
-    expect(screen.getByLabelText("대출 남은 개월")).toHaveValue(36);
+    expect(screen.queryByLabelText("대출 이름")).not.toBeInTheDocument();
+  });
+
+  it("keeps loan details collapsed until the user asks for them", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="loans" />);
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+
+    const detailsButton = screen.getByRole("button", { name: "대출 세부 조건 열기" });
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("대출 이름")).not.toBeInTheDocument();
+
+    await user.click(detailsButton);
+
+    expect(screen.getByRole("button", { name: "대출 세부 조건 닫기" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("대출 이름")).toBeInTheDocument();
+    expect(screen.getByLabelText("대출 남은 개월")).toHaveValue(12);
   });
 
   it("jumps directly to the selected loan principal input from the compact action row", async () => {
@@ -294,6 +326,7 @@ describe("FinanceScenarioEditor", () => {
     const onChange = vi.fn();
     render(<ControlledEditor mode="loans" onChange={onChange} />);
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.click(screen.getByRole("button", { name: "대출 세부 조건 열기" }));
     onChange.mockClear();
 
     const months = screen.getByLabelText("대출 남은 개월");
@@ -325,6 +358,7 @@ describe("FinanceScenarioEditor", () => {
     render(<ControlledEditor />);
     await user.click(screen.getByRole("tab", { name: "대출" }));
     await user.click(screen.getByRole("button", { name: "대출 추가" }));
+    await user.click(screen.getByRole("button", { name: "대출 세부 조건 열기" }));
 
     await user.clear(screen.getByLabelText("대출 남은 개월"));
     await user.type(screen.getByLabelText("대출 남은 개월"), "10000");
@@ -343,6 +377,7 @@ describe("FinanceScenarioEditor", () => {
     render(<ControlledEditor onChange={onChange} />);
 
     await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+    await user.click(screen.getByRole("button", { name: "자산 세부 조건 열기" }));
     await user.type(screen.getByLabelText("자산 계좌 이름"), "월급");
 
     const latest = onChange.mock.calls.at(-1)?.[0] as FinanceScenarioInput;
