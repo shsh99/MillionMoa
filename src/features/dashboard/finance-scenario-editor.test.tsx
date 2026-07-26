@@ -181,6 +181,20 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByLabelText("자산 계좌 잔액")).toHaveFocus();
   });
 
+  it("keeps selected asset context visible beside quick amount actions", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="assets" />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    const quickActions = screen.getByTestId("asset-quick-action-row");
+
+    expect(quickActions).toHaveAccessibleName("자산 빠른 입력");
+    expect(within(quickActions).getByText("새 자산 1")).toBeInTheDocument();
+    expect(within(quickActions).getByText(/입출금 · 월 납입 0원/)).toBeInTheDocument();
+    expect(quickActions.className).toContain("rounded-[24px]");
+    expect(quickActions.className).toContain("bg-gradient-to-br");
+  });
+
   it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
     const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({
@@ -319,6 +333,20 @@ describe("FinanceScenarioEditor", () => {
     await user.click(screen.getByRole("button", { name: "대출 원금 바로 입력" }));
 
     expect(screen.getByLabelText("대출 원금")).toHaveFocus();
+  });
+
+  it("keeps selected loan context visible beside quick amount actions", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="loans" />);
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+
+    const quickActions = screen.getByTestId("loan-quick-action-row");
+
+    expect(quickActions).toHaveAccessibleName("대출 빠른 입력");
+    expect(within(quickActions).getByText("새 대출 1")).toBeInTheDocument();
+    expect(within(quickActions).getByText(/신용 · 연 0.0% · 12개월/)).toBeInTheDocument();
+    expect(quickActions.className).toContain("rounded-[24px]");
+    expect(quickActions.className).toContain("bg-gradient-to-br");
   });
 
   it("keeps invalid loan rate and term drafts local until blur validation", async () => {

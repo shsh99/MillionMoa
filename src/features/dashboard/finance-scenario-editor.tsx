@@ -166,6 +166,82 @@ function PresetButton({
   );
 }
 
+function compactWon(value: number) {
+  const sign = value < 0 ? "-" : "";
+  const absolute = Math.abs(value);
+  if (absolute >= 100_000_000) {
+    const eok = absolute / 100_000_000;
+    return `${sign}${Number.isInteger(eok) ? eok : eok.toFixed(1)}억`;
+  }
+  if (absolute >= 10_000) return `${sign}${Math.round(absolute / 10_000).toLocaleString("ko-KR")}만원`;
+  return `${sign}${absolute.toLocaleString("ko-KR")}원`;
+}
+
+function categoryLabel<T extends string>(items: Array<{ value: T; label: string }>, value: T) {
+  return items.find((item) => item.value === value)?.label ?? value;
+}
+
+function QuickActionButton({
+  label,
+  detail,
+  tone,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  tone: "asset" | "loan";
+  onClick: () => void;
+}) {
+  const primaryClass = tone === "loan" ? "bg-[var(--wallet-coral)]" : "bg-[var(--wallet-primary)]";
+  return (
+    <button
+      aria-label={label}
+      className={`${primaryClass} min-h-14 rounded-[18px] px-3 py-2 text-left text-white shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] active:translate-y-0`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="block text-sm font-extrabold leading-5">{label.replace(" 바로 입력", "").replace(" 바로 수정", "")}</span>
+      <span className="mt-0.5 block text-[11px] font-bold leading-4 text-white/75">{detail}</span>
+    </button>
+  );
+}
+
+function QuickActionRow({
+  label,
+  title,
+  meta,
+  amount,
+  amountTone = "asset",
+  children,
+  testId,
+}: {
+  label: string;
+  title: string;
+  meta: string;
+  amount: string;
+  amountTone?: "asset" | "loan";
+  children: React.ReactNode;
+  testId: string;
+}) {
+  const amountClass = amountTone === "loan" ? "text-[#9a4f58]" : "text-[var(--wallet-primary-strong)]";
+  return (
+    <section
+      aria-label={label}
+      className="rounded-[24px] border border-[var(--wallet-line)] bg-gradient-to-br from-white to-[var(--wallet-surface-tint)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_10px_24px_rgba(15,23,42,0.06)]"
+      data-testid={testId}
+    >
+      <div className="flex items-start justify-between gap-3 px-2 pb-2 pt-1">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-extrabold text-[var(--wallet-ink)]">{title}</p>
+          <p className="mt-0.5 text-xs font-bold text-[var(--wallet-muted)]">{meta}</p>
+        </div>
+        <strong className={`shrink-0 text-right text-sm font-black tabular-nums ${amountClass}`}>{amount}</strong>
+      </div>
+      <div className="grid grid-cols-2 gap-2">{children}</div>
+    </section>
+  );
+}
+
 function focusInputById(id: string) {
   const input = document.getElementById(id);
   if (!(input instanceof HTMLInputElement)) return;
@@ -484,27 +560,24 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedAsset ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="asset-editor-panel">
-                <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-[var(--wallet-surface-tint)] p-2">
-                  <button
-                    aria-label="자산 잔액 바로 입력"
-                    className="min-h-12 rounded-2xl bg-[var(--wallet-primary)] px-3 text-sm font-extrabold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-                    onClick={() => focusInputById(`asset-${selectedAsset.id}-balance`)}
-                    type="button"
-                  >
-                    잔액 입력
-                  </button>
-                  <button
-                    aria-label="월 납입 바로 입력"
-                    className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[var(--wallet-primary-strong)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                <QuickActionRow
+                  amount={compactWon(selectedAsset.balance)}
+                  label="자산 빠른 입력"
+                  meta={`${categoryLabel(assetCategories, selectedAsset.category)} · 월 납입 ${compactWon(selectedAsset.monthlyContribution ?? 0)}`}
+                  testId="asset-quick-action-row"
+                  title={selectedAsset.name}
+                >
+                  <QuickActionButton detail="만원 단위로 바로 조정" label="자산 잔액 바로 입력" onClick={() => focusInputById(`asset-${selectedAsset.id}-balance`)} tone="asset" />
+                  <QuickActionButton
+                    detail="적금·투자 납입액"
+                    label="월 납입 바로 입력"
                     onClick={() => {
                       setAssetDetailsOpen(true);
                       setPendingFocusInputId(`asset-${selectedAsset.id}-contribution`);
                     }}
-                    type="button"
-                  >
-                    월 납입
-                  </button>
-                </div>
+                    tone="asset"
+                  />
+                </QuickActionRow>
                 <section aria-label="자산 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
@@ -558,27 +631,25 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedLoan ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="loan-editor-panel">
-                <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-[var(--wallet-surface-tint)] p-2">
-                  <button
-                    aria-label="대출 원금 바로 입력"
-                    className="min-h-12 rounded-2xl bg-[var(--wallet-coral)] px-3 text-sm font-extrabold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
-                    onClick={() => focusInputById(`loan-${selectedLoan.id}-principal`)}
-                    type="button"
-                  >
-                    원금 입력
-                  </button>
-                  <button
-                    aria-label="대출 금리 바로 입력"
-                    className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[#9a4f58] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                <QuickActionRow
+                  amount={compactWon(selectedLoan.principal)}
+                  amountTone="loan"
+                  label="대출 빠른 입력"
+                  meta={`${categoryLabel(loanCategories, selectedLoan.category)} · 연 ${(selectedLoan.annualRate * 100).toFixed(1)}% · ${selectedLoan.remainingMonths}개월`}
+                  testId="loan-quick-action-row"
+                  title={selectedLoan.name}
+                >
+                  <QuickActionButton detail="만원 단위로 바로 조정" label="대출 원금 바로 입력" onClick={() => focusInputById(`loan-${selectedLoan.id}-principal`)} tone="loan" />
+                  <QuickActionButton
+                    detail="이자 영향 확인"
+                    label="대출 금리 바로 입력"
                     onClick={() => {
                       setLoanDetailsOpen(true);
                       setPendingFocusInputName("loan-annual-rate");
                     }}
-                    type="button"
-                  >
-                    금리 수정
-                  </button>
-                </div>
+                    tone="loan"
+                  />
+                </QuickActionRow>
                 <section aria-label="대출 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
