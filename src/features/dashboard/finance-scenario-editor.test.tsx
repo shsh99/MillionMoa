@@ -121,6 +121,25 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByRole("button", { name: "자산 계좌 잔액 부호 전환" })).toBeInTheDocument();
   });
 
+  it("applies asset presets so users do not need to fill every account field", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor mode="assets" onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "파킹통장 빠른 설정" }));
+
+    const latest = onChange.mock.calls.at(-1)?.[0] as FinanceScenarioInput;
+    expect(latest.assets[0]).toMatchObject({
+      name: "파킹통장",
+      category: "parking",
+      annualRate: 0.025,
+      monthlyContribution: 0,
+    });
+    expect(screen.getByLabelText("자산 계좌 이름")).toHaveValue("파킹통장");
+    expect(screen.getByLabelText("자산 계좌 종류")).toHaveValue("parking");
+  });
+
   it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
     const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({
@@ -212,6 +231,28 @@ describe("FinanceScenarioEditor", () => {
     await user.click(within(methodGroup).getByRole("radio", { name: "원금균등" }));
 
     expect(within(methodGroup).getByRole("radio", { name: "원금균등" })).toBeChecked();
+  });
+
+  it("applies loan presets so common loan details are one tap away", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor mode="loans" onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "학자금 대출 빠른 설정" }));
+
+    const latest = onChange.mock.calls.at(-1)?.[0] as FinanceScenarioInput;
+    expect(latest.loans[0]).toMatchObject({
+      name: "학자금 대출",
+      category: "student",
+      annualRate: 0.017,
+      remainingMonths: 36,
+      repaymentMethod: "equal-payment",
+    });
+    expect(screen.getByLabelText("대출 이름")).toHaveValue("학자금 대출");
+    expect(screen.getByLabelText("대출 종류")).toHaveValue("student");
+    expect(screen.getByLabelText("대출 연 금리")).toHaveValue(1.7);
+    expect(screen.getByLabelText("대출 남은 개월")).toHaveValue(36);
   });
 
   it("keeps invalid loan rate and term drafts local until blur validation", async () => {
