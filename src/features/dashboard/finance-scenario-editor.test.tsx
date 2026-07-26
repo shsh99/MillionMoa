@@ -154,6 +154,16 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getAllByRole("button", { name: /계좌 선택/ })).toHaveLength(3);
   });
 
+  it("jumps directly to the selected asset balance input from the compact action row", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="assets" />);
+    await user.click(screen.getByRole("button", { name: "자산 계좌 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "자산 잔액 바로 입력" }));
+
+    expect(screen.getByLabelText("자산 계좌 잔액")).toHaveFocus();
+  });
+
   it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
     const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({
@@ -267,6 +277,16 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByLabelText("대출 종류")).toHaveValue("student");
     expect(screen.getByLabelText("대출 연 금리")).toHaveValue(1.7);
     expect(screen.getByLabelText("대출 남은 개월")).toHaveValue(36);
+  });
+
+  it("jumps directly to the selected loan principal input from the compact action row", async () => {
+    const user = userEvent.setup();
+    render(<ControlledEditor mode="loans" />);
+    await user.click(screen.getByRole("button", { name: "대출 추가" }));
+
+    await user.click(screen.getByRole("button", { name: "대출 원금 바로 입력" }));
+
+    expect(screen.getByLabelText("대출 원금")).toHaveFocus();
   });
 
   it("keeps invalid loan rate and term drafts local until blur validation", async () => {
