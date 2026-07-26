@@ -51,6 +51,83 @@ const repaymentMethods: Array<{ value: LoanRepaymentMethod; label: string }> = [
   { value: "bullet", label: "만기일시" },
 ];
 
+type AssetPreset = {
+  label: string;
+  detail: string;
+  patch: Pick<AssetAccount, "name" | "category"> & Partial<Pick<AssetAccount, "annualRate" | "monthlyContribution">>;
+};
+
+type LoanPreset = {
+  label: string;
+  detail: string;
+  patch: Pick<Loan, "name" | "category" | "annualRate" | "remainingMonths" | "repaymentMethod">;
+};
+
+const assetPresets: AssetPreset[] = [
+  {
+    label: "월급통장",
+    detail: "입출금 · 연 0%",
+    patch: { name: "월급통장", category: "checking", annualRate: 0, monthlyContribution: 0 },
+  },
+  {
+    label: "파킹통장",
+    detail: "파킹 · 연 2.5%",
+    patch: { name: "파킹통장", category: "parking", annualRate: 0.025, monthlyContribution: 0 },
+  },
+  {
+    label: "청년적금",
+    detail: "적금 · 월 50만원 · 연 4.5%",
+    patch: { name: "청년적금", category: "savings", annualRate: 0.045, monthlyContribution: 500_000 },
+  },
+];
+
+const loanPresets: LoanPreset[] = [
+  {
+    label: "학자금 대출",
+    detail: "연 1.7% · 36개월",
+    patch: {
+      name: "학자금 대출",
+      category: "student",
+      annualRate: 0.017,
+      remainingMonths: 36,
+      repaymentMethod: "equal-payment",
+    },
+  },
+  {
+    label: "신용 대출",
+    detail: "연 5.5% · 36개월",
+    patch: {
+      name: "신용 대출",
+      category: "credit",
+      annualRate: 0.055,
+      remainingMonths: 36,
+      repaymentMethod: "equal-payment",
+    },
+  },
+  {
+    label: "전세 대출",
+    detail: "연 3.8% · 24개월",
+    patch: {
+      name: "전세 대출",
+      category: "jeonse",
+      annualRate: 0.038,
+      remainingMonths: 24,
+      repaymentMethod: "bullet",
+    },
+  },
+  {
+    label: "주택 대출",
+    detail: "연 4.2% · 360개월",
+    patch: {
+      name: "주택담보대출",
+      category: "mortgage",
+      annualRate: 0.042,
+      remainingMonths: 360,
+      repaymentMethod: "equal-principal",
+    },
+  },
+];
+
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -61,6 +138,31 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function PresetButton({
+  label,
+  detail,
+  tone,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  tone: "asset" | "loan";
+  onClick: () => void;
+}) {
+  const accentClass = tone === "loan" ? "text-[#9a4f58]" : "text-[var(--wallet-primary-strong)]";
+  return (
+    <button
+      aria-label={`${label} 빠른 설정`}
+      className="min-h-16 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] active:translate-y-0"
+      onClick={onClick}
+      type="button"
+    >
+      <span className={`block text-sm font-extrabold ${accentClass}`}>{label}</span>
+      <span className="mt-1 block text-xs font-bold text-[var(--wallet-muted)]">{detail}</span>
+    </button>
   );
 }
 
@@ -323,6 +425,23 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedAsset ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="asset-editor-panel">
+                <section aria-label="자산 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
+                    <p className="text-xs font-bold text-[var(--wallet-muted)]">선택 후 잔액만 입력</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {assetPresets.map((preset) => (
+                      <PresetButton
+                        detail={preset.detail}
+                        key={preset.label}
+                        label={preset.label}
+                        onClick={() => updateAsset(preset.patch)}
+                        tone="asset"
+                      />
+                    ))}
+                  </div>
+                </section>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="계좌 이름"><input aria-label="자산 계좌 이름" autoComplete="off" className={inputClass} name="asset-name" ref={assetNameRef} value={selectedAsset.name} onChange={(e) => updateAsset({ name: e.target.value })} /></Field>
                   <Field label="계좌 종류"><select aria-label="자산 계좌 종류" autoComplete="off" className={inputClass} name="asset-category" value={selectedAsset.category} onChange={(e) => updateAsset({ category: e.target.value as AssetAccountCategory })}>{assetCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
@@ -344,6 +463,23 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedLoan ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="loan-editor-panel">
+                <section aria-label="대출 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
+                    <p className="text-xs font-bold text-[var(--wallet-muted)]">원금만 넣고 바로 계산</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-4">
+                    {loanPresets.map((preset) => (
+                      <PresetButton
+                        detail={preset.detail}
+                        key={preset.label}
+                        label={preset.label}
+                        onClick={() => updateLoan(preset.patch)}
+                        tone="loan"
+                      />
+                    ))}
+                  </div>
+                </section>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="대출 이름"><input aria-label="대출 이름" autoComplete="off" className={inputClass} name="loan-name" ref={loanNameRef} value={selectedLoan.name} onChange={(e) => updateLoan({ name: e.target.value })} /></Field>
                   <Field label="대출 종류"><select aria-label="대출 종류" autoComplete="off" className={inputClass} name="loan-category" value={selectedLoan.category} onChange={(e) => updateLoan({ category: e.target.value as LoanCategory })}>{loanCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
