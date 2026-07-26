@@ -6,7 +6,9 @@ import { MoneyInput } from "../../components/money-input";
 import { calculateNonTaxablePay } from "../../lib/calculators/payroll/non-taxable-pay";
 import { calculateSalaryNetPay } from "../../lib/calculators/payroll/salary-net-pay";
 import { calculateSmeIncomeTaxReduction } from "../../lib/calculators/payroll/sme-income-tax-reduction";
+import { KR_PAYROLL_POLICY_2026, KR_SME_INCOME_TAX_REDUCTION_POLICY_2026 } from "../../lib/policies/kr/2026";
 import type { IncomeTaxProvenance, SalaryNetPayReason, SmeEligibilityType, SmeIncomeTaxReductionReason } from "../../lib/calculators/payroll/types";
+import { PolicySourcePanel } from "./policy-source-panel";
 
 type NetSalaryCalculatorProps = {
   currentMonthlyIncome: number;
@@ -247,6 +249,18 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
           <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!canApplyResult || estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome} onClick={() => { if (!estimatedResult || !canApplyResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
           {appliedNotice && <p aria-live="polite" className="mt-3 text-center text-xs font-bold text-[#8ee0c8]">{appliedNotice}</p>}
         </aside>
+      </div>
+      <div className="border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-5 py-4 sm:px-6">
+        <PolicySourcePanel
+          notes={[
+            "소득세는 앱이 임의 계산하지 않고 홈택스 간이세액표 또는 급여명세서 입력값을 그대로 사용합니다.",
+            "4대보험은 2026년 공단 요율과 기준소득월액 상하한을 적용하며 실제 고지 기준액과 다를 수 있습니다.",
+            "중소기업 취업자 감면은 회사, 업종, 근로자 제외 요건을 직접 확인한 경우에만 추정 반영합니다.",
+          ]}
+          sources={[...KR_PAYROLL_POLICY_2026.sources, ...KR_SME_INCOME_TAX_REDUCTION_POLICY_2026.sources]}
+          title="실수령액 공식 기준"
+          verifiedAt={KR_PAYROLL_POLICY_2026.verifiedAt}
+        />
       </div>
       <div className="border-t border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-5 py-4 text-xs font-semibold leading-5 text-[var(--wallet-muted)] sm:px-6">보험료는 2026년 공단 요율, 소득세는 2026.03.01 이후 홈택스 근로소득 간이세액표 또는 급여명세서 입력값, 비과세는 국세청·법령상 항목별 한도를 기준으로 반영합니다. 실제 고지 기준액, 회사 자격, 급여 항목과 원 단위 절사에 따라 달라질 수 있습니다.</div>
     </section>

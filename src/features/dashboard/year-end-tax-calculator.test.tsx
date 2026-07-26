@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { YearEndTaxCalculator } from "./year-end-tax-calculator";
@@ -27,5 +27,16 @@ describe("YearEndTaxCalculator", () => {
     await user.click(screen.getByRole("button", { name: "올해 기납부 소득세에 10만원 더하기" }));
 
     expect(screen.getByRole("textbox", { name: "올해 기납부 소득세" })).toHaveValue("150");
+  });
+
+  it("shows official source context and separates credits from refund candidates", () => {
+    render(<YearEndTaxCalculator currentMonthlySurplus={500_000} />);
+
+    const sourcePanel = screen.getByRole("region", { name: "연말정산 공식 기준" });
+
+    expect(within(sourcePanel).getByText("2026-07-26 확인")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText(/환급 후보는 전체 결정세액이 아니라/)).toBeInTheDocument();
+    expect(within(sourcePanel).getByRole("link", { name: /연금계좌 세액공제/ })).toHaveAttribute("href", expect.stringContaining("nts.go.kr"));
+    expect(within(sourcePanel).getByRole("link", { name: /월세액 세액공제/ })).toHaveAttribute("href", expect.stringContaining("nts.go.kr"));
   });
 });

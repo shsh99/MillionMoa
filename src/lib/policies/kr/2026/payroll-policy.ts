@@ -8,7 +8,7 @@ export const KR_PAYROLL_POLICY_2026 = {
   taxYear: 2026,
   effectiveFrom: "2026-01-01",
   effectiveTo: "2026-12-31",
-  verifiedAt: "2026-07-18",
+  verifiedAt: "2026-07-26",
   pension: {
     employeeRate: 0.0475,
     bounds: [

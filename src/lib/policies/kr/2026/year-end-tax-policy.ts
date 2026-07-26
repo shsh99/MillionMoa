@@ -3,6 +3,7 @@ import type { PolicySource } from "./payroll-policy";
 export const KR_YEAR_END_TAX_POLICY_2026 = {
   id: "kr-year-end-tax-credits-2026-v1",
   taxYear: 2026,
+  verifiedAt: "2026-07-26",
   pensionAccount: {
     grossPayThresholdForHighRate: 55_000_000,
     highRate: 0.15,
