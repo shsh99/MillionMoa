@@ -140,6 +140,20 @@ describe("FinanceScenarioEditor", () => {
     expect(screen.getByLabelText("자산 계좌 종류")).toHaveValue("parking");
   });
 
+  it("creates a starter asset set in one step for early-career users", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor mode="assets" onChange={onChange} />);
+
+    await user.click(screen.getByRole("button", { name: "초년생 기본 자산 세트 만들기" }));
+
+    const latest = onChange.mock.calls.at(-1)?.[0] as FinanceScenarioInput;
+    expect(latest.assets.map((asset) => asset.name)).toEqual(["월급통장", "파킹통장", "청년적금"]);
+    expect(latest.assets.map((asset) => asset.category)).toEqual(["checking", "parking", "savings"]);
+    expect(screen.getByRole("button", { name: "월급통장 계좌 선택" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("button", { name: /계좌 선택/ })).toHaveLength(3);
+  });
+
   it("keeps nearby account context and can undo a deletion", async () => {
     const user = userEvent.setup();
     const accounts = ["첫 계좌", "둘째 계좌", "셋째 계좌"].map((name, index) => ({

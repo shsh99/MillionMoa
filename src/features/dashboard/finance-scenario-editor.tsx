@@ -306,6 +306,23 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
     setSelectedAssetId(asset.id);
     onChange({ ...value, assets: [...value.assets, asset] });
   };
+
+  const addStarterAssetSet = () => {
+    const existingNames = new Set(value.assets.map((asset) => asset.name));
+    const starterAssets: AssetAccount[] = assetPresets
+      .filter((preset) => !existingNames.has(preset.patch.name))
+      .map((preset) => ({
+        id: newId("asset"),
+        balance: 0,
+        annualRate: 0,
+        monthlyContribution: 0,
+        ...preset.patch,
+      }));
+    if (starterAssets.length === 0) return;
+    setSelectedAssetId(starterAssets[0].id);
+    onChange({ ...value, assets: [...value.assets, ...starterAssets] });
+  };
+
   const addLoan = () => {
     const loan: Loan = {
       id: newId("loan"),
@@ -421,6 +438,14 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
               ))}
               <button type="button" aria-label="자산 계좌 추가" className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-[var(--wallet-primary)] px-3 text-sm font-bold text-white" onClick={addAsset}>
                 <Plus className="size-4" aria-hidden="true" /> 추가
+              </button>
+              <button
+                aria-label="초년생 기본 자산 세트 만들기"
+                className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-bold text-[var(--wallet-primary-strong)] shadow-sm hover:border-[var(--wallet-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                onClick={addStarterAssetSet}
+                type="button"
+              >
+                <Landmark className="size-4" aria-hidden="true" /> 기본 세트
               </button>
             </div>
             {selectedAsset ? (
