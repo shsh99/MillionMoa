@@ -166,6 +166,20 @@ function PresetButton({
   );
 }
 
+function focusInputById(id: string) {
+  const input = document.getElementById(id);
+  if (!(input instanceof HTMLInputElement)) return;
+  input.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  input.focus();
+}
+
+function focusInputByName(name: string) {
+  const input = document.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+  if (!input) return;
+  input.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  input.focus();
+}
+
 const inputClass = "h-12 w-full rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-base font-semibold text-[var(--wallet-ink)] shadow-sm outline-none focus:border-[var(--wallet-primary)] focus:ring-2 focus:ring-[var(--wallet-primary-soft)]";
 
 function formatDraftNumber(value: number) {
@@ -450,6 +464,24 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedAsset ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="asset-editor-panel">
+                <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-[var(--wallet-surface-tint)] p-2">
+                  <button
+                    aria-label="자산 잔액 바로 입력"
+                    className="min-h-12 rounded-2xl bg-[var(--wallet-primary)] px-3 text-sm font-extrabold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                    onClick={() => focusInputById(`asset-${selectedAsset.id}-balance`)}
+                    type="button"
+                  >
+                    잔액 입력
+                  </button>
+                  <button
+                    aria-label="월 납입 바로 입력"
+                    className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[var(--wallet-primary-strong)] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                    onClick={() => focusInputById(`asset-${selectedAsset.id}-contribution`)}
+                    type="button"
+                  >
+                    월 납입
+                  </button>
+                </div>
                 <section aria-label="자산 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
@@ -488,6 +520,24 @@ export function FinanceScenarioEditor({ value, onChange, mode: controlledMode }:
             </div>
             {selectedLoan ? (
               <div className="space-y-4 border-t border-[var(--wallet-line)] pt-4" data-testid="loan-editor-panel">
+                <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-[var(--wallet-surface-tint)] p-2">
+                  <button
+                    aria-label="대출 원금 바로 입력"
+                    className="min-h-12 rounded-2xl bg-[var(--wallet-coral)] px-3 text-sm font-extrabold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                    onClick={() => focusInputById(`loan-${selectedLoan.id}-principal`)}
+                    type="button"
+                  >
+                    원금 입력
+                  </button>
+                  <button
+                    aria-label="대출 금리 바로 입력"
+                    className="min-h-12 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-sm font-extrabold text-[#9a4f58] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                    onClick={() => focusInputByName("loan-annual-rate")}
+                    type="button"
+                  >
+                    금리 수정
+                  </button>
+                </div>
                 <section aria-label="대출 빠른 설정" className="rounded-[20px] bg-[var(--wallet-surface-tint)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h3 className="text-sm font-extrabold text-[var(--wallet-ink)]">빠른 설정</h3>
