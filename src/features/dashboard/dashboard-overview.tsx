@@ -27,6 +27,35 @@ type DashboardCategory = "overview" | "input" | "calculators" | "products" | "in
 type MoneyWorkspace = "cash-flow" | "expenses" | "assets" | "loans";
 type SaveStatus = "saved" | "dirty" | "failed";
 
+function buildSaveStatusView(saveStatus: SaveStatus, savedAt: string | null = null) {
+  const savedTime = savedAt ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(savedAt)) : null;
+  if (saveStatus === "failed") {
+    return {
+      label: "저장 실패",
+      detail: "입력은 화면에 유지됩니다",
+      summaryDetail: "입력 유지됨 · 재시도 필요",
+      pillClass: "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]",
+      tone: "coral" as const,
+    };
+  }
+  if (saveStatus === "dirty") {
+    return {
+      label: "저장 필요",
+      detail: "저장 버튼으로 시각을 남길 수 있습니다",
+      summaryDetail: "저장 버튼 필요",
+      pillClass: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+      tone: "blue" as const,
+    };
+  }
+  return {
+    label: savedTime ? `저장됨 · ${savedTime}` : "자동 저장됨",
+    detail: savedTime ? "이 기기에 저장 시각까지 남겼습니다" : "변경하면 이 기기에 바로 보관됩니다",
+    summaryDetail: savedTime ? `저장 시각 ${savedTime}` : "자동 저장됨",
+    pillClass: "bg-[var(--wallet-mint-soft)] text-[#14806d]",
+    tone: "mint" as const,
+  };
+}
+
 export const initialFinanceScenario: FinanceScenarioInput = {
   assets: [
     { id: "parking", name: "생활비 파킹통장", category: "parking", balance: 4_000_000, annualRate: 0.025 },
@@ -363,8 +392,7 @@ function MoneyWorkspaceHeader({
   saveStatus: SaveStatus;
 }) {
   const item = moneyWorkspaceItems.find((entry) => entry.id === activeWorkspace) ?? moneyWorkspaceItems[0];
-  const statusLabel = saveStatus === "failed" ? "저장 실패" : saveStatus === "dirty" ? "저장 필요" : "저장됨";
-  const savedTime = savedAt ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(savedAt)) : null;
+  const saveView = buildSaveStatusView(saveStatus, savedAt);
 
   return (
     <div className="sticky top-3 z-10 rounded-[24px] border border-[var(--wallet-line)] bg-white/95 px-4 py-3 shadow-[0_12px_28px_rgba(31,41,55,0.08)] backdrop-blur supports-[not(backdrop-filter:blur(1px))]:bg-white">
@@ -372,19 +400,16 @@ function MoneyWorkspaceHeader({
         <div className="min-w-0">
           <p className="text-xs font-bold text-[var(--wallet-primary)]">입력 작업공간</p>
           <h2 className="mt-0.5 text-xl font-extrabold text-[var(--wallet-ink)]">{item.label}</h2>
+          <p className="mt-1 text-xs font-bold text-[var(--wallet-muted)]" data-testid="finance-save-helper">{saveView.detail}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span
-            aria-label="저장 상태"
-            className={`inline-flex min-h-10 items-center rounded-full px-3 text-xs font-extrabold ${
-              saveStatus === "failed"
-                ? "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]"
-                : "bg-[var(--wallet-mint-soft)] text-[#14806d]"
-            }`}
+            aria-label={`저장 상태 ${saveView.label} ${saveView.detail}`}
+            className={`inline-flex min-h-10 items-center rounded-full px-3 text-xs font-extrabold ${saveView.pillClass}`}
             data-testid="finance-save-status"
             role="status"
           >
-            {statusLabel}{savedTime ? ` · ${savedTime}` : ""}
+            {saveView.label}
           </span>
           {saveStatus === "failed" && (
             <button aria-label="저장 재시도" className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-extrabold text-[var(--wallet-coral)] hover:bg-[var(--wallet-coral-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-coral)]" onClick={onRetry} type="button">
@@ -409,7 +434,7 @@ function InputWorkspaceSummary({
   scenario: ReturnType<typeof calculateFinanceScenario>;
   saveStatus: SaveStatus;
 }) {
-  const saveLabel = saveStatus === "failed" ? "저장 실패" : saveStatus === "dirty" ? "저장 필요" : "저장됨";
+  const saveView = buildSaveStatusView(saveStatus);
   const summaryItems = [
     {
       label: "월 여유금",
@@ -437,11 +462,11 @@ function InputWorkspaceSummary({
     },
     {
       label: "저장 상태",
-      value: saveLabel,
-      detail: saveStatus === "failed" ? "재시도 필요" : "이 기기에 보관",
+      value: saveView.label,
+      detail: saveView.summaryDetail,
       href: "#planner-cash-flow",
       icon: <ShieldCheck aria-hidden="true" size={18} strokeWidth={1.9} />,
-      tone: saveStatus === "failed" ? "coral" : "mint",
+      tone: saveView.tone,
     },
   ];
   const toneClass = {
@@ -596,7 +621,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
       setSaveStatus("saved");
       if (nextSavedAt) setSavedAt(nextSavedAt);
     } catch {
-      setStorageNotice("변경 내용은 유지되지만 이 기기에 저장하지 못했습니다.");
+      setStorageNotice("변경 내용은 화면에 유지됩니다. 이 기기에 저장하지 못했으니 재시도해 주세요.");
       setSaveStatus("failed");
     }
   };

@@ -279,6 +279,7 @@ describe("DashboardOverview", () => {
 
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
     await waitFor(() => expect(screen.getByTestId("finance-save-status")).toHaveTextContent("저장됨"));
+    expect(screen.getByTestId("finance-save-helper")).toHaveTextContent("변경하면 이 기기에 바로 보관됩니다");
     const workspaceNav = screen.getByRole("navigation", { name: "입력 작업공간" });
     await user.click(within(workspaceNav).getByRole("link", { name: /자산/ }));
     await user.click(within(workspaceNav).getByRole("link", { name: /현금흐름/ }));
@@ -306,6 +307,9 @@ describe("DashboardOverview", () => {
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
 
     expect(await screen.findByTestId("finance-save-status")).toHaveTextContent("저장 실패");
+    expect(screen.getByTestId("finance-save-helper")).toHaveTextContent("입력은 화면에 유지됩니다");
+    const inputSummary = screen.getByRole("region", { name: "입력 요약" });
+    expect(within(inputSummary).getByRole("link", { name: /저장 상태 저장 실패 입력 유지됨 · 재시도 필요/ })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("420");
     await user.click(screen.getByRole("button", { name: "저장 재시도" }));
 
@@ -386,7 +390,7 @@ describe("DashboardOverview", () => {
 
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
 
-    expect(await screen.findByText("변경 내용은 유지되지만 이 기기에 저장하지 못했습니다.")).toBeInTheDocument();
+    expect(await screen.findByText("변경 내용은 화면에 유지됩니다. 이 기기에 저장하지 못했으니 재시도해 주세요.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("420");
   });
 
