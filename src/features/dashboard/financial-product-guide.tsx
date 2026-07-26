@@ -147,7 +147,7 @@ export function FinancialProductGuide() {
           rows={[
             ["최고 금리", "연 4.5%"],
             ["납입 한도", "회당 월 100만원"],
-            ["소득공제", "연 납입 40%"],
+            ["소득공제", "연 300만원 한도 · 40%"],
             ["비과세", "요건 충족 시 500만원"],
           ]}
           sourceUrl={policy.youthHousingDream.source.url}
@@ -210,7 +210,7 @@ export function FinancialProductGuide() {
             <ResultSummary rows={[
               ["2년 원금", formatCurrency(estimatedHousing?.principal ?? 0)],
               ["예상 이자", formatCurrency(estimatedHousing?.netInterest ?? 0)],
-              ["연 소득공제 대상", formatCurrency(Math.min(housingMonthlyDeposit * 12, policy.youthHousingDream.taxFreeContributionAnnualLimit) * policy.youthHousingDream.incomeDeductionRate)],
+              ["연 소득공제 대상", formatCurrency(Math.min(housingMonthlyDeposit * 12, policy.youthHousingDream.incomeDeductionAnnualPaymentLimit) * policy.youthHousingDream.incomeDeductionRate)],
               ["2년 예상", formatCurrency(estimatedHousing?.maturityAmount ?? 0)],
             ]} />
           </div>
@@ -236,6 +236,21 @@ export function FinancialProductGuide() {
         <p><PiggyBank aria-hidden="true" className="mr-1 inline" size={14} />청년도약계좌는 서민금융진흥원 기준 신규 가입이 {policy.youthLeapAccount.newEnrollmentUntil}까지였으므로, 2026년 계획에서는 기존 가입자 관리나 청년미래적금 갈아타기 검토 항목으로 분리합니다. ISA 비과세 한도 확대안은 미확정이라 계산에 반영하지 않습니다.</p>
         <p className="mt-2"><ShieldCheck aria-hidden="true" className="mr-1 inline" size={14} />계산은 공식 조건과 사용자가 입력한 금리·순이익 가정을 분리한 추정치입니다.</p>
       </div>
+      <section aria-label="공식 출처 검증" className="mt-3 rounded-2xl border border-[var(--wallet-line)] bg-white px-4 py-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-sm font-black text-[var(--wallet-ink)]">공식 출처 검증</h3>
+          <span className="text-xs font-bold text-[var(--wallet-muted)]">{policy.verifiedAt} 기준</span>
+        </div>
+        <ul className="mt-3 grid gap-2 text-xs font-bold text-[var(--wallet-muted)] sm:grid-cols-2">
+          {policy.sources.map((source) => (
+            <li className="min-w-0" key={source.url}>
+              <a className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-2xl bg-[var(--wallet-surface-tint)] px-3 text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-primary-soft)]" href={source.url} rel="noreferrer" target="_blank">
+                <span className="truncate">{source.title}</span><ExternalLink aria-hidden="true" className="shrink-0" size={13} />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
     </section>
   );
 }

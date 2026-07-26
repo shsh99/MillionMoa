@@ -2,7 +2,7 @@ import type { PolicySource } from "./payroll-policy";
 
 export const KR_FINANCIAL_PRODUCTS_POLICY_2026 = {
   id: "kr-financial-products-2026-v1",
-  verifiedAt: "2026-07-19",
+  verifiedAt: "2026-07-26",
   youthFutureSavings: {
     monthlyDepositLimit: 500_000,
     termMonths: 36,
@@ -29,8 +29,8 @@ export const KR_FINANCIAL_PRODUCTS_POLICY_2026 = {
     maximumAnnualRate: 0.045,
     monthlyDepositLimit: 1_000_000,
     incomeDeductionRate: 0.4,
+    incomeDeductionAnnualPaymentLimit: 3_000_000,
     taxFreeInterestLimit: 5_000_000,
-    taxFreeContributionAnnualLimit: 6_000_000,
     source: {
       title: "국토교통부 청년주택드림청약",
       url: "https://www.molit.go.kr/2024dreamaccount/main.jsp",
