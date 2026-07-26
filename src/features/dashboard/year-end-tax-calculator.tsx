@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { CalendarCheck, Home, PiggyBank, ReceiptText, ShieldCheck } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { calculateYearEndTaxCredits } from "../../lib/calculators/year-end-tax";
+import { KR_YEAR_END_TAX_POLICY_2026 } from "../../lib/policies/kr/2026";
+import { PolicySourcePanel } from "./policy-source-panel";
 
 type YearEndTaxCalculatorProps = {
   currentMonthlySurplus: number;
@@ -124,6 +126,18 @@ export function YearEndTaxCalculator({ currentMonthlySurplus }: YearEndTaxCalcul
 
           <div className="mt-5 flex items-center gap-2 rounded-2xl bg-[#9fe6cf] px-3 py-3 text-xs font-black text-[#18352e]"><ShieldCheck aria-hidden="true" size={17} />홈택스 예상세액 계산 결과와 대조하세요.</div>
         </aside>
+      </div>
+      <div className="border-t border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-5 py-4 sm:px-6">
+        <PolicySourcePanel
+          notes={[
+            "연금계좌 세액공제는 총급여 구간별 공제율과 연금저축, IRP 합산 한도를 분리해 추정합니다.",
+            "월세 세액공제는 무주택 세대, 대상 주택, 임대차계약과 전입 요건을 모두 확인한 경우에만 반영합니다.",
+            "환급 후보는 전체 결정세액이 아니라 입력한 공제 항목의 효과이며, 기납부 소득세를 넘지 않도록 제한합니다.",
+          ]}
+          sources={KR_YEAR_END_TAX_POLICY_2026.sources}
+          title="연말정산 공식 기준"
+          verifiedAt={KR_YEAR_END_TAX_POLICY_2026.verifiedAt}
+        />
       </div>
     </section>
   );

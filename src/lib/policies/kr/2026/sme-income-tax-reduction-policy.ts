@@ -3,6 +3,7 @@ import type { PolicySource } from "./payroll-policy";
 export const KR_SME_INCOME_TAX_REDUCTION_POLICY_2026 = {
   id: "kr-sme-income-tax-reduction-2026-v1",
   taxYear: 2026,
+  verifiedAt: "2026-07-26",
   eligibleEmploymentDeadline: "2026-12-31",
   annualCap: 2_000_000,
   militaryServiceMonthCap: 72,

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NetSalaryCalculator } from "./net-salary-calculator";
@@ -106,6 +106,18 @@ describe("NetSalaryCalculator", () => {
     expect(onApply).toHaveBeenCalledTimes(1);
   });
 
+  it("shows official source context for payroll, insurance, and SME reduction assumptions", () => {
+    render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={vi.fn()} />);
+
+    const sourcePanel = screen.getByRole("region", { name: "실수령액 공식 기준" });
+
+    expect(within(sourcePanel).getByText("2026-07-26 확인")).toBeInTheDocument();
+    expect(within(sourcePanel).getByText(/소득세는 앱이 임의 계산하지 않고/)).toBeInTheDocument();
+    expect(within(sourcePanel).getByRole("link", { name: /국세청 홈택스 근로소득간이세액표/ })).toHaveAttribute("href", expect.stringContaining("hometax.go.kr"));
+    expect(within(sourcePanel).getByRole("link", { name: /국민연금공단 2026 기준소득월액/ })).toHaveAttribute("href", expect.stringContaining("nps.or.kr"));
+    expect(within(sourcePanel).getByRole("link", { name: /국세청 중소기업 취업자 소득세 감면/ })).toHaveAttribute("href", expect.stringContaining("nts.go.kr"));
+  });
+
   it("requires confirmation for zero income tax and confirmed other non-taxable pay", async () => {
     const user = userEvent.setup();
     const onApply = vi.fn();
@@ -147,7 +159,7 @@ describe("NetSalaryCalculator", () => {
     await user.click(screen.getByRole("button", { name: "식대에 20만원 더하기" }));
 
     expect(screen.getByText("비과세 금액은 세전 급여를 넘을 수 없습니다.")).toBeInTheDocument();
-    expect(screen.getByText(/실제 고지 기준액/)).toBeInTheDocument();
+    expect(screen.getAllByText(/실제 고지 기준액/).length).toBeGreaterThan(0);
   });
 
   it("exposes assessed insurance bases only when requested", async () => {
