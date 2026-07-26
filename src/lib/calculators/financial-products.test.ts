@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateInstallmentMaturity, calculateIsaTaxBenefit } from "./financial-products";
+import { KR_FINANCIAL_PRODUCTS_POLICY_2026 } from "../policies/kr/2026";
 
 describe("financial product calculators", () => {
   it("separates deposit principal, interest, tax, and government contribution", () => {
@@ -34,5 +35,10 @@ describe("financial product calculators", () => {
       taxSaving: 671_000,
       taxableProfitAfterLimit: 1_000_000,
     });
+  });
+
+  it("keeps the housing subscription income deduction cap aligned with official policy", () => {
+    expect(KR_FINANCIAL_PRODUCTS_POLICY_2026.youthHousingDream.incomeDeductionAnnualPaymentLimit).toBe(3_000_000);
+    expect(KR_FINANCIAL_PRODUCTS_POLICY_2026.youthHousingDream.incomeDeductionRate).toBe(0.4);
   });
 });
