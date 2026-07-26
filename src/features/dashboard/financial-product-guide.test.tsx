@@ -51,4 +51,27 @@ describe("FinancialProductGuide", () => {
 
     expect(screen.getByText("418,000원")).toBeInTheDocument();
   });
+
+  it("applies beginner presets so users can avoid manual product input", async () => {
+    const user = userEvent.setup();
+    render(<FinancialProductGuide />);
+
+    await user.click(screen.getByRole("button", { name: /안전 시작/ }));
+
+    expect(screen.getByRole("textbox", { name: "월 납입액" })).toHaveValue("10");
+    expect(screen.getByRole("spinbutton", { name: "청년미래적금 가정 금리" })).toHaveValue(3.5);
+    expect(screen.getByRole("checkbox", { name: "우대형 정부기여금 12%로 보기" })).not.toBeChecked();
+
+    await user.click(screen.getAllByRole("button", { name: "계산 열기" })[1]);
+    await user.click(screen.getByRole("button", { name: /공제 최대/ }));
+
+    expect(screen.getByRole("textbox", { name: "월 납입액" })).toHaveValue("25");
+    expect(screen.getByText("1,200,000원")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "계산 열기" })[2]);
+    await user.click(screen.getByRole("button", { name: /일반형 기준/ }));
+
+    expect(screen.getByRole("textbox", { name: "계좌 순이익 가정" })).toHaveValue("200");
+    expect(screen.getByRole("checkbox", { name: "서민형 비과세 한도 400만원 적용" })).not.toBeChecked();
+  });
 });

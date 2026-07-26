@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink, Home, Landmark, PiggyBank, ShieldCheck, SlidersHorizontal, Sprout } from "lucide-react";
+import { BadgePercent, ExternalLink, Home, Landmark, PiggyBank, ShieldCheck, SlidersHorizontal, Sprout } from "lucide-react";
 import type { ReactNode } from "react";
 import { MoneyInput } from "../../components/money-input";
 import { calculateInstallmentMaturity, calculateIsaTaxBenefit } from "../../lib/calculators/financial-products";
@@ -21,6 +21,12 @@ function formatShortMoney(value: number) {
 
 const policy = KR_FINANCIAL_PRODUCTS_POLICY_2026;
 type ActiveProduct = "future" | "housing" | "isa";
+
+type ProductPreset = {
+  label: string;
+  detail: string;
+  onApply: () => void;
+};
 
 function ProductCard({
   icon,
@@ -109,6 +115,89 @@ export function FinancialProductGuide() {
   const estimatedFuture = futureResult.status === "estimated" ? futureResult : null;
   const estimatedHousing = housingResult.status === "estimated" ? housingResult : null;
   const estimatedIsa = isaResult.status === "estimated" ? isaResult : null;
+  const presets: Record<ActiveProduct, ProductPreset[]> = {
+    future: [
+      {
+        label: "안전 시작",
+        detail: "월 10만원, 일반형, 연 3.5%",
+        onApply: () => {
+          setFutureMonthlyDeposit(100_000);
+          setFutureAnnualRatePercent(3.5);
+          setFuturePreferential(false);
+        },
+      },
+      {
+        label: "최대 납입",
+        detail: "월 50만원, 일반형, 연 5%",
+        onApply: () => {
+          setFutureMonthlyDeposit(policy.youthFutureSavings.monthlyDepositLimit);
+          setFutureAnnualRatePercent(5);
+          setFuturePreferential(false);
+        },
+      },
+      {
+        label: "우대형 확인",
+        detail: "월 50만원, 우대형 기여금",
+        onApply: () => {
+          setFutureMonthlyDeposit(policy.youthFutureSavings.monthlyDepositLimit);
+          setFutureAnnualRatePercent(5);
+          setFuturePreferential(true);
+        },
+      },
+    ],
+    housing: [
+      {
+        label: "청약 인정",
+        detail: "월 10만원, 납입 습관용",
+        onApply: () => {
+          setHousingMonthlyDeposit(100_000);
+          setHousingAnnualRatePercent(4.5);
+        },
+      },
+      {
+        label: "공제 최대",
+        detail: "연 300만원 한도에 맞춘 월 25만원",
+        onApply: () => {
+          setHousingMonthlyDeposit(250_000);
+          setHousingAnnualRatePercent(4.5);
+        },
+      },
+      {
+        label: "한도 테스트",
+        detail: "월 100만원까지 저축 여력 확인",
+        onApply: () => {
+          setHousingMonthlyDeposit(policy.youthHousingDream.monthlyDepositLimit);
+          setHousingAnnualRatePercent(4.5);
+        },
+      },
+    ],
+    isa: [
+      {
+        label: "일반형 기준",
+        detail: "순이익 200만원, 일반형 한도",
+        onApply: () => {
+          setIsaProfit(policy.isa.generalTaxFreeProfitLimit);
+          setIsaLowIncome(false);
+        },
+      },
+      {
+        label: "서민형 기준",
+        detail: "순이익 400만원, 서민형 한도",
+        onApply: () => {
+          setIsaProfit(policy.isa.lowIncomeTaxFreeProfitLimit);
+          setIsaLowIncome(true);
+        },
+      },
+      {
+        label: "초과이익 확인",
+        detail: "순이익 1,000만원 절세 차이",
+        onApply: () => {
+          setIsaProfit(10_000_000);
+          setIsaLowIncome(true);
+        },
+      },
+    ],
+  };
 
   return (
     <section aria-labelledby="financial-products-title" className="scroll-mt-36 rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-4 shadow-[var(--wallet-shadow)] sm:p-5" id="finance-products">
@@ -182,6 +271,26 @@ export function FinancialProductGuide() {
             </h3>
           </div>
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]"><SlidersHorizontal aria-hidden="true" size={21} /></span>
+        </div>
+
+        <div className="mt-4 rounded-[22px] bg-[var(--wallet-surface-tint)] p-3">
+          <div className="flex items-center gap-2 text-xs font-black text-[var(--wallet-primary-strong)]">
+            <BadgePercent aria-hidden="true" size={15} />
+            추천 프리셋
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {presets[activeProduct].map((preset) => (
+              <button
+                className="min-h-[4.75rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wallet-primary)]"
+                key={preset.label}
+                onClick={preset.onApply}
+                type="button"
+              >
+                <span className="block text-sm font-black text-[var(--wallet-ink)]">{preset.label}</span>
+                <span className="mt-1 block break-keep text-xs font-bold leading-4 text-[var(--wallet-muted)]">{preset.detail}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeProduct === "future" && (
