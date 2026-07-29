@@ -4,23 +4,23 @@
 
 :root {
   color-scheme: light;
-  --wallet-page: #f3f7fb;
+  --wallet-page: #f5f7fb;
   --wallet-surface: #ffffff;
-  --wallet-surface-tint: #f6f9fd;
-  --wallet-ink: #151b2d;
-  --wallet-muted: #667085;
-  --wallet-line: #e3eaf2;
-  --wallet-primary: #3182f6;
-  --wallet-primary-strong: #1f6ed4;
+  --wallet-surface-tint: #f2f5f9;
+  --wallet-ink: #17191f;
+  --wallet-muted: #747985;
+  --wallet-line: #e7ebf0;
+  --wallet-primary: #0064ff;
+  --wallet-primary-strong: #0050d8;
   --wallet-primary-soft: #eaf3ff;
-  --wallet-primary-subtle: #dcecff;
-  --wallet-mint: #26c6a3;
-  --wallet-mint-soft: #e7f9f4;
-  --wallet-coral: #e55f6d;
-  --wallet-coral-soft: #fff0f3;
-  --wallet-warning: #c48714;
+  --wallet-primary-subtle: #d8eaff;
+  --wallet-mint: #00b894;
+  --wallet-mint-soft: #e7fbf5;
+  --wallet-coral: #f04452;
+  --wallet-coral-soft: #fff1f3;
+  --wallet-warning: #f59f00;
   --wallet-warning-soft: #fff7df;
-  --wallet-shadow: 0 1px 2px rgba(20, 36, 64, 0.04), 0 16px 40px rgba(20, 36, 64, 0.07);
+  --wallet-shadow: 0 1px 2px rgba(23, 25, 31, 0.04), 0 18px 46px rgba(38, 45, 61, 0.08);
   --money-ink: var(--wallet-ink);
   --money-muted: var(--wallet-muted);
   --money-line: var(--wallet-line);
@@ -36,10 +36,14 @@
 
 body {
   margin: 0;
-  background: var(--wallet-page);
+  background:
+    linear-gradient(180deg, #ffffff 0, var(--wallet-page) 15rem),
+    var(--wallet-page);
   color: var(--wallet-ink);
   font-family: var(--font-millionmoa, "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -57,6 +61,14 @@ body {
 ::selection {
   background: var(--wallet-primary-soft);
   color: var(--wallet-ink);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }
 
 .dashboard-focus-target:focus {

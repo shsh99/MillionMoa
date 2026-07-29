@@ -21,12 +21,12 @@ describe("AppShell", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
 
     const shell = screen.getByRole("main").parentElement;
-    expect(shell).toHaveClass("pb-[calc(4.75rem+env(safe-area-inset-bottom))]");
+    expect(shell).toHaveClass("pb-[calc(5.75rem+env(safe-area-inset-bottom))]");
 
     const header = screen.getByRole("link", { name: /MillionMoa/ }).closest("header")!;
-    expect(header.firstElementChild).toHaveClass("h-16");
+    expect(header.firstElementChild).toHaveClass("h-[3.75rem]", "sm:h-16");
     expect(screen.getByTestId("brand-mark")).toHaveClass(
-      "rounded-2xl",
+      "rounded-[16px]",
       "bg-[var(--wallet-primary)]",
       "text-white",
     );
@@ -40,8 +40,9 @@ describe("AppShell", () => {
 
     const mobileNav = screen.getByRole("navigation", { name: "모바일 주요 메뉴" });
     expect(mobileNav).toHaveClass(
-      "inset-x-0",
-      "bottom-0",
+      "inset-x-3",
+      "bottom-3",
+      "rounded-[28px]",
       "pb-[env(safe-area-inset-bottom)]",
     );
     const expectedItems = [
