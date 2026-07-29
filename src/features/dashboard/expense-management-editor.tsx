@@ -16,6 +16,11 @@ type Props = {
   onChange: (value: ExpenseItem[]) => void;
 };
 
+type ExpensePreset = Pick<ExpenseItem, "name" | "kind" | "categoryId" | "amount" | "frequency" | "autoRenewal"> & {
+  paymentDay?: number;
+  nextPaymentDate?: string;
+};
+
 const kinds: Array<{ id: ExpenseKind; label: string }> = [
   { id: "fixed", label: "고정비" },
   { id: "living", label: "생활비" },
@@ -29,6 +34,24 @@ const frequencies: Array<{ id: ExpenseFrequency; label: string }> = [
   { id: "annual", label: "매년" },
   { id: "one-time", label: "일회성" },
 ];
+
+const presetTemplates: Record<ExpenseKind, ExpensePreset[]> = {
+  fixed: [
+    { name: "월세", kind: "fixed", categoryId: "fixed.housing", amount: 500_000, frequency: "monthly", paymentDay: 25, autoRenewal: true },
+    { name: "통신비", kind: "fixed", categoryId: "fixed.telecom", amount: 70_000, frequency: "monthly", paymentDay: 10, autoRenewal: true },
+    { name: "구독 서비스", kind: "fixed", categoryId: "fixed.subscription", amount: 15_000, frequency: "monthly", paymentDay: 1, autoRenewal: true },
+  ],
+  living: [
+    { name: "식비", kind: "living", categoryId: "living.food", amount: 300_000, frequency: "monthly", autoRenewal: false },
+    { name: "교통비", kind: "living", categoryId: "living.transport", amount: 80_000, frequency: "monthly", autoRenewal: false },
+    { name: "생활용품", kind: "living", categoryId: "living.shopping", amount: 100_000, frequency: "monthly", autoRenewal: false },
+  ],
+  irregular: [
+    { name: "병원비", kind: "irregular", categoryId: "irregular.medical", amount: 100_000, frequency: "one-time", autoRenewal: false },
+    { name: "경조사", kind: "irregular", categoryId: "irregular.gift", amount: 100_000, frequency: "one-time", autoRenewal: false },
+    { name: "여행 적립", kind: "irregular", categoryId: "irregular.travel", amount: 1_200_000, frequency: "annual", nextPaymentDate: today(), autoRenewal: false },
+  ],
+};
 
 const inputClass = "min-h-11 w-full rounded-lg border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 text-base font-semibold text-[var(--wallet-ink)] outline-none focus-visible:border-[var(--wallet-primary)] focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary-soft)]";
 const maximumExpenseAmount = 1_000_000_000_000;
@@ -189,6 +212,18 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
     onChange([...value, item]);
   };
 
+  const addPresetItem = (preset: ExpensePreset) => {
+    const item: ExpenseItem = {
+      ...preset,
+      id: newId(),
+      startDate: today(),
+    };
+    focusNameRef.current = true;
+    setKind(preset.kind);
+    setSelectedId(item.id);
+    onChange([...value, item]);
+  };
+
   const duplicateSelected = () => {
     if (!selected) return;
     const suffix = " 복사본";
@@ -261,6 +296,19 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-black text-[var(--wallet-ink)]">{kinds.find((entry) => entry.id === kind)?.label} 목록</h3>
             <button aria-label={`${kinds.find((entry) => entry.id === kind)?.label} 추가`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--wallet-primary)] px-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] focus-visible:ring-offset-2" onClick={addItem} type="button"><Plus aria-hidden="true" className="size-4" />추가</button>
+          </div>
+          <div aria-label={`${kinds.find((entry) => entry.id === kind)?.label} 빠른 추가`} className="mb-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {presetTemplates[kind].map((preset) => (
+              <button
+                className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-3 py-2 text-left transition hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                key={preset.name}
+                onClick={() => addPresetItem(preset)}
+                type="button"
+              >
+                <span className="block text-sm font-black text-[var(--wallet-ink)]">{preset.name}</span>
+                <span className="mt-1 block text-xs font-bold text-[var(--wallet-muted)]">{formatShortWon(preset.amount)} · {frequencies.find((frequency) => frequency.id === preset.frequency)?.label}</span>
+              </button>
+            ))}
           </div>
           {visibleItems.length === 0 ? (
             <div className="py-8 text-center">
