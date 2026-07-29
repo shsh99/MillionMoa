@@ -331,6 +331,59 @@ function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
   );
 }
 
+function BankingQuickActions() {
+  const actions = [
+    {
+      label: "실수령액 계산기",
+      detail: "월급·소득세",
+      href: "#finance-calculators",
+      icon: <Calculator aria-hidden="true" size={21} strokeWidth={2} />,
+      className: "bg-[#fff4cf] text-[#7a5600]",
+    },
+    {
+      label: "지출 정리",
+      detail: "고정비·생활비",
+      href: "#expense-management",
+      icon: <ListChecks aria-hidden="true" size={21} strokeWidth={2} />,
+      className: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    },
+    {
+      label: "계좌 입력",
+      detail: "통장·적금",
+      href: "#finance-assets",
+      icon: <Landmark aria-hidden="true" size={21} strokeWidth={2} />,
+      className: "bg-[var(--wallet-mint-soft)] text-[#0c7d67]",
+    },
+    {
+      label: "청년 혜택",
+      detail: "적금·ISA",
+      href: "#finance-products",
+      icon: <Sparkles aria-hidden="true" size={21} strokeWidth={2} />,
+      className: "bg-[#f0edff] text-[#5146aa]",
+    },
+  ];
+
+  return (
+    <section aria-label="빠른 금융 메뉴" className="rounded-[30px] border border-white bg-white p-3 shadow-[0_18px_46px_rgba(28,38,58,0.08)] sm:p-4">
+      <div className="grid grid-cols-4 gap-2">
+        {actions.map((action) => (
+          <a
+            className="group grid min-h-[6.25rem] min-w-0 content-start justify-items-center gap-2 rounded-[24px] px-2 py-3 text-center transition-[background-color,transform] hover:bg-[var(--wallet-surface-tint)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+            href={action.href}
+            key={action.label}
+          >
+            <span className={`grid size-12 place-items-center rounded-[20px] shadow-sm transition-transform group-hover:-translate-y-0.5 ${action.className}`}>{action.icon}</span>
+            <span className="min-w-0">
+              <strong className="block break-keep text-[12px] font-black leading-4 text-[var(--wallet-ink)] sm:text-sm">{action.label}</strong>
+              <span className="mt-1 hidden text-[11px] font-bold text-[var(--wallet-muted)] sm:block">{action.detail}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CalculationCheckPanel({
   input,
   scenario,
@@ -766,6 +819,8 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
                 <div aria-live="polite"><Metric icon={<WalletCards size={16} />} label="상환 후 여유" value={scenario.rawMonthlySurplus} warning={scenario.rawMonthlySurplus < 0} testId="overview-monthly-surplus" /></div>
               </dl>
             </section>
+
+            <BankingQuickActions />
 
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
               <MonthlyFlowOverview scenario={scenario} />
