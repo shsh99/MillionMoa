@@ -43,6 +43,11 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("navigation", { name: "대시보드 카테고리" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "월 수입 사용 비율" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "계좌와 대출" })).toBeInTheDocument();
+    const quickActions = screen.getByRole("region", { name: "빠른 금융 메뉴" });
+    expect(within(quickActions).getByRole("link", { name: /실수령액 계산기/ })).toHaveAttribute("href", "#finance-calculators");
+    expect(within(quickActions).getByRole("link", { name: /지출 정리/ })).toHaveAttribute("href", "#expense-management");
+    expect(within(quickActions).getByRole("link", { name: /계좌 입력/ })).toHaveAttribute("href", "#finance-assets");
+    expect(within(quickActions).getByRole("link", { name: /청년 혜택/ })).toHaveAttribute("href", "#finance-products");
     expect(screen.getByRole("region", { name: "계산 점검" })).toBeInTheDocument();
     expect(screen.getByText("빠진 입력 점검")).toBeInTheDocument();
     expect(screen.getByText("현재 입력값으로 목표·현금흐름·대출 영향 계산이 가능합니다.")).toBeInTheDocument();
