@@ -54,6 +54,12 @@ const SME_REDUCTION_MESSAGES: Record<SmeIncomeTaxReductionReason, string> = {
   "annual-cap-exceeded": "올해 이미 감면받은 세액은 연 200만원 한도를 넘을 수 없습니다.",
 };
 
+const salaryPresets = [
+  { label: "첫 월급", detail: "세전 280만원 · 소득세 3만원", grossPay: 2_800_000, incomeTax: 30_000 },
+  { label: "현재 예시", detail: "세전 320만원 · 소득세 5만원", grossPay: 3_200_000, incomeTax: 50_000 },
+  { label: "상여 전 점검", detail: "세전 450만원 · 소득세 13만원", grossPay: 4_500_000, incomeTax: 130_000 },
+];
+
 export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalaryCalculatorProps) {
   const [grossPay, setGrossPay] = useState(3_200_000);
   const [mealAllowance, setMealAllowance] = useState(0);
@@ -146,6 +152,18 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
     ["지방소득세", estimatedResult?.deductions.localIncomeTax ?? 0],
   ] as const;
   const maxDeduction = Math.max(...deductionRows.map(([, value]) => value), 1);
+  const applySalaryPreset = (preset: (typeof salaryPresets)[number]) => {
+    setGrossPay(preset.grossPay);
+    setIncomeTaxBeforeReduction(preset.incomeTax);
+    setMealAllowance(0);
+    setSelfDrivingAllowance(0);
+    setChildcareAllowance(0);
+    setProductionOvertimeAllowance(0);
+    setOtherConfirmedNonTaxablePay(0);
+    setSmeReductionEnabled(false);
+    setZeroIncomeTaxConfirmed(false);
+    setOtherConfirmedNonTaxablePayVerified(false);
+  };
 
   return (
     <section aria-labelledby="net-salary-title" className="overflow-hidden rounded-[24px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] shadow-[var(--wallet-shadow)]">
@@ -160,14 +178,36 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
         <div className="space-y-5">
           <label className="block text-sm font-bold text-[var(--wallet-ink)]">급여 지급일<input aria-label="급여 지급일" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold" max="2026-12-31" min="2026-01-01" onChange={(event) => setPaymentDate(event.target.value)} type="date" value={paymentDate} /></label>
           <MoneyInput id="salary-gross" label="월 세전 급여" value={grossPay} onChange={setGrossPay} quickAmountsManwon={[10, 50, 100, 500]} />
-          <div className="rounded-[22px] border border-[#d9f0e8] bg-[#f8fffc] p-4">
-            <div className="flex items-start justify-between gap-3">
+          <section aria-label="실수령액 빠른 시작" className="rounded-[22px] bg-[var(--wallet-surface-tint)] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-[var(--wallet-primary-strong)]">빠른 시작</p>
+                <h3 className="mt-1 text-sm font-black text-[var(--wallet-ink)]">대표 월급으로 먼저 계산</h3>
+              </div>
+              <Sparkles aria-hidden="true" className="text-[var(--wallet-primary-strong)]" size={18} />
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {salaryPresets.map((preset) => (
+                <button
+                  className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left transition hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                  key={preset.label}
+                  onClick={() => applySalaryPreset(preset)}
+                  type="button"
+                >
+                  <span className="block text-sm font-black text-[var(--wallet-ink)]">{preset.label}</span>
+                  <span className="mt-1 block break-keep text-xs font-bold leading-4 text-[var(--wallet-muted)]">{preset.detail}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+          <details className="rounded-[22px] border border-[#d9f0e8] bg-[#f8fffc] p-4">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-extrabold text-[#247a65]">비과세 항목</p>
-                <h3 className="mt-1 text-base font-black text-[var(--wallet-ink)]">급여명세서 항목별로 입력</h3>
+                <h3 className="mt-1 text-base font-black text-[var(--wallet-ink)]">식대·차량·보육수당이 있을 때만 입력</h3>
               </div>
               <span className="grid size-10 place-items-center rounded-2xl bg-white text-[#247a65]"><WalletCards aria-hidden="true" size={20} /></span>
-            </div>
+            </summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <MoneyInput id="salary-meal-allowance" label="식대" value={mealAllowance} onChange={setMealAllowance} quickAmountsManwon={[10, 20]} />
               <MoneyInput id="salary-car-allowance" label="자기차량운전보조금" value={selfDrivingAllowance} onChange={setSelfDrivingAllowance} quickAmountsManwon={[10, 20]} />
@@ -202,7 +242,7 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
                 ))}
               </div>
             )}
-          </div>
+          </details>
           <div className="rounded-[22px] border border-[var(--wallet-line)] bg-white p-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-bold text-[var(--wallet-ink)]">소득세 입력 기준<select aria-label="소득세 입력 기준" className="mt-2 min-h-11 w-full rounded-2xl border border-[var(--wallet-line)] bg-white px-3 font-bold" onChange={(event) => setIncomeTaxProvenance(event.target.value as IncomeTaxProvenance)} value={incomeTaxProvenance}><option value="payslip">급여명세서</option><option value="official-table">홈택스 간이세액표</option></select></label>
