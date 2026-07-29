@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NetSalaryCalculator } from "./net-salary-calculator";
 
+async function openNonTaxableDetails(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByText("식대·차량·보육수당이 있을 때만 입력"));
+}
+
 describe("NetSalaryCalculator", () => {
   it("adds salary shortcuts cumulatively and waits for explicit application", async () => {
     const user = userEvent.setup();
@@ -24,6 +28,19 @@ describe("NetSalaryCalculator", () => {
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply.mock.calls[0][0]).toBeGreaterThan(0);
   }, 10_000);
+
+  it("applies simple salary presets and keeps optional details collapsed by default", async () => {
+    const user = userEvent.setup();
+    render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={vi.fn()} />);
+
+    expect(screen.getByRole("region", { name: "실수령액 빠른 시작" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "식대", hidden: true })).not.toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: /첫 월급/ }));
+
+    expect(screen.getByRole("textbox", { name: "월 세전 급여" })).toHaveValue("280");
+    expect(screen.getByRole("textbox", { name: "월 소득세" })).toHaveValue("3");
+  });
 
   it("shows a lower income tax and higher take-home pay for confirmed youth reduction", async () => {
     const user = userEvent.setup();
@@ -88,6 +105,7 @@ describe("NetSalaryCalculator", () => {
     const onApply = vi.fn();
     render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={onApply} />);
 
+    await openNonTaxableDetails(user);
     expect(screen.getByRole("textbox", { name: "식대" })).toHaveValue("0");
     expect(screen.getByText("홈택스 월급여 입력값")).toBeInTheDocument();
     expect(screen.getByText(/소득세 입력 필요/)).toBeInTheDocument();
@@ -123,6 +141,7 @@ describe("NetSalaryCalculator", () => {
     const onApply = vi.fn();
     render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={onApply} />);
 
+    await openNonTaxableDetails(user);
     await user.click(screen.getByRole("button", { name: "기타 비과세에 20만원 더하기" }));
     expect(screen.getByText(/기타 비과세 · 확인 전 0원 반영/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용" })).toBeDisabled();
@@ -139,6 +158,7 @@ describe("NetSalaryCalculator", () => {
     const user = userEvent.setup();
     render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={vi.fn()} />);
 
+    await openNonTaxableDetails(user);
     await user.click(screen.getByRole("button", { name: "생산직 연장·야간·휴일수당에 20만원 더하기" }));
     await user.click(screen.getByRole("button", { name: "생산직 연장·야간·휴일수당에 20만원 더하기" }));
     await user.click(screen.getByRole("button", { name: "올해 이미 비과세 반영한 생산직 수당에 100만원 더하기" }));
@@ -154,6 +174,7 @@ describe("NetSalaryCalculator", () => {
     const user = userEvent.setup();
     render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={vi.fn()} />);
 
+    await openNonTaxableDetails(user);
     await user.clear(screen.getByRole("textbox", { name: "월 세전 급여" }));
     await user.type(screen.getByRole("textbox", { name: "월 세전 급여" }), "10");
     await user.click(screen.getByRole("button", { name: "식대에 20만원 더하기" }));
