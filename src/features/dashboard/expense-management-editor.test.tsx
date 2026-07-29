@@ -106,6 +106,36 @@ describe("ExpenseManagementEditor", () => {
     expect(latest.at(-1)).toMatchObject({ name: "관리비", amount: 200_000, kind: "fixed" });
   });
 
+  it("adds categorized expense presets with amount and schedule defaults", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ControlledEditor initialValue={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole("button", { name: /월세.*50만.*매월/ }));
+
+    expect(onChange.mock.calls.at(-1)?.[0][0]).toMatchObject({
+      name: "월세",
+      kind: "fixed",
+      categoryId: "fixed.housing",
+      amount: 500_000,
+      frequency: "monthly",
+      paymentDay: 25,
+      autoRenewal: true,
+    });
+    expect(screen.getByRole("textbox", { name: "지출 이름" })).toHaveValue("월세");
+
+    await user.click(screen.getByRole("tab", { name: /생활비/ }));
+    await user.click(screen.getByRole("button", { name: /교통비.*8만.*매월/ }));
+
+    expect(onChange.mock.calls.at(-1)?.[0].at(-1)).toMatchObject({
+      name: "교통비",
+      kind: "living",
+      categoryId: "living.transport",
+      amount: 80_000,
+      frequency: "monthly",
+    });
+  });
+
   it("keeps required name edits local until a valid value is committed", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn((next: ExpenseItem[]) => {
