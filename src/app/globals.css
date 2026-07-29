@@ -1,15 +1,17 @@
+@import url("https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/variable/woff2/SUIT-Variable.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
-  --wallet-page: #f5f7fb;
+  --wallet-page: #f7f8fb;
   --wallet-surface: #ffffff;
-  --wallet-surface-tint: #f2f5f9;
-  --wallet-ink: #17191f;
-  --wallet-muted: #747985;
-  --wallet-line: #e7ebf0;
+  --wallet-surface-tint: #f2f5f8;
+  --wallet-ink: #181b22;
+  --wallet-muted: #717784;
+  --wallet-line: #e8edf3;
   --wallet-primary: #0064ff;
   --wallet-primary-strong: #0050d8;
   --wallet-primary-soft: #eaf3ff;
@@ -40,7 +42,7 @@ body {
     linear-gradient(180deg, #ffffff 0, var(--wallet-page) 15rem),
     var(--wallet-page);
   color: var(--wallet-ink);
-  font-family: var(--font-millionmoa, "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif);
+  font-family: var(--font-millionmoa, "SUIT Variable", SUIT, "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   line-height: 1.5;
@@ -49,7 +51,7 @@ body {
 }
 
 .font-pretendard {
-  --font-millionmoa: "Pretendard Variable", Pretendard, "SUIT Variable", SUIT, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-millionmoa: "SUIT Variable", SUIT, "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   font-family: var(--font-millionmoa);
 }
 

@@ -27,7 +27,7 @@ describe("AppShell", () => {
     expect(header.firstElementChild).toHaveClass("h-[3.75rem]", "sm:h-16");
     expect(screen.getByTestId("brand-mark")).toHaveClass(
       "rounded-[16px]",
-      "bg-[var(--wallet-primary)]",
+      "bg-[linear-gradient(145deg,#1463ff,#0050d8)]",
       "text-white",
     );
     expect(screen.getByRole("button", { name: "알림" })).toBeInTheDocument();
