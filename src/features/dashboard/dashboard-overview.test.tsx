@@ -43,6 +43,9 @@ describe("DashboardOverview", () => {
     expect(screen.getByRole("navigation", { name: "대시보드 카테고리" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "월 수입 사용 비율" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "계좌와 대출" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "계산 점검" })).toBeInTheDocument();
+    expect(screen.getByText("빠진 입력 점검")).toBeInTheDocument();
+    expect(screen.getByText("현재 입력값으로 목표·현금흐름·대출 영향 계산이 가능합니다.")).toBeInTheDocument();
     expect(screen.getByText("생활비 파킹통장")).toBeInTheDocument();
     expect(screen.getByText("학자금 대출")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /실수령액 확인/ })).toHaveAttribute("href", "#finance-calculators");
@@ -61,6 +64,29 @@ describe("DashboardOverview", () => {
     expect(screen.queryByRole("region", { name: "자산 및 대출 편집" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "향후 10년 순자산과 부채 반영 순자산 추이" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "지출 관리" })).not.toBeInTheDocument();
+  });
+
+  it("shows calculation check links when required planning inputs are missing", async () => {
+    localStorage.setItem(ownerStorageKey, JSON.stringify({
+      version: 2,
+      scenario: {
+        ...initialFinanceScenario,
+        assets: [],
+        loans: [],
+        expenses: [],
+        monthlyIncome: 0,
+      },
+    }));
+
+    render(<DashboardOverview referenceDate={new Date(Date.UTC(2026, 0, 1))} />);
+
+    const checkPanel = await screen.findByRole("region", { name: "계산 점검" });
+
+    expect(within(checkPanel).getByText("보완 필요")).toBeInTheDocument();
+    expect(within(checkPanel).getByText("3개 항목을 보완하면 결과가 더 정확해집니다.")).toBeInTheDocument();
+    expect(within(checkPanel).getByRole("link", { name: /월급 보완 필요/ })).toHaveAttribute("href", "#finance-calculators");
+    expect(within(checkPanel).getByRole("link", { name: /지출 보완 필요/ })).toHaveAttribute("href", "#expense-management");
+    expect(within(checkPanel).getByRole("link", { name: /자산 보완 필요/ })).toHaveAttribute("href", "#finance-assets");
   });
 
   it("uses Korean banking copy and soft consumer-finance surfaces on the overview", () => {

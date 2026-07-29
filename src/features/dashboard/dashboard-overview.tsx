@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CreditCard, Landmark, ListChecks, PiggyBank, RotateCcw, Save, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
+import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CheckCircle2, CreditCard, Landmark, ListChecks, PiggyBank, RotateCcw, Save, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
@@ -325,6 +325,74 @@ function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
             <div className="min-w-0 flex-1"><strong className="block truncate text-sm font-extrabold text-[var(--wallet-ink)]">{loan.name}</strong><span className="mt-0.5 block text-xs font-semibold text-[var(--wallet-muted)]">남은 {loan.remainingMonths}개월 · 연 {(loan.annualRate * 100).toFixed(1)}%</span></div>
             <span className="shrink-0 text-sm font-black text-[var(--wallet-coral)]">-{formatShortMoney(loan.principal)}</span>
           </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CalculationCheckPanel({
+  input,
+  scenario,
+}: {
+  input: FinanceScenarioInput;
+  scenario: ReturnType<typeof calculateFinanceScenario>;
+}) {
+  const checks = [
+    {
+      label: "월급",
+      ok: scenario.monthlyIncome > 0,
+      detail: scenario.monthlyIncome > 0 ? `${formatShortMoney(scenario.monthlyIncome)} 반영` : "실수령액 또는 월수입 입력 필요",
+      href: "#finance-calculators",
+    },
+    {
+      label: "지출",
+      ok: input.expenses.length > 0 && scenario.monthlyNonLoanExpense > 0,
+      detail: input.expenses.length > 0 ? `${input.expenses.length}개 항목 · 월 ${formatShortMoney(scenario.monthlyNonLoanExpense)}` : "고정비와 생활비 항목 추가 필요",
+      href: "#expense-management",
+    },
+    {
+      label: "자산",
+      ok: input.assets.length > 0,
+      detail: input.assets.length > 0 ? `${input.assets.length}개 계좌 · ${formatShortMoney(scenario.totalAssetBalances)}` : "통장, 적금, 파킹통장 입력 필요",
+      href: "#finance-assets",
+    },
+    {
+      label: "대출",
+      ok: scenario.totalLoanPrincipals === 0 || scenario.totalLoanPayment > 0,
+      detail: scenario.totalLoanPrincipals > 0 ? `${input.loans.length}건 · 월 ${formatShortMoney(scenario.totalLoanPayment)} 납입` : "대출이 없으면 0원으로 정상 계산",
+      href: "#finance-loans-input",
+    },
+  ];
+  const blockedCount = checks.filter((check) => !check.ok).length;
+
+  return (
+    <section aria-label="계산 점검" className="rounded-[30px] border border-white bg-white p-4 shadow-[0_18px_46px_rgba(28,38,58,0.08)] sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black text-[var(--wallet-primary-strong)]">계산 상태</p>
+          <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]">빠진 입력 점검</h2>
+          <p className="mt-1 text-sm font-bold text-[var(--wallet-muted)]">{blockedCount === 0 ? "현재 입력값으로 목표·현금흐름·대출 영향 계산이 가능합니다." : `${blockedCount}개 항목을 보완하면 결과가 더 정확해집니다.`}</p>
+        </div>
+        <span className={`inline-flex min-h-9 items-center rounded-full px-3 text-xs font-black ${blockedCount === 0 ? "bg-[var(--wallet-mint-soft)] text-[#0c7d67]" : "bg-[var(--wallet-warning-soft)] text-[#8a5b08]"}`}>{blockedCount === 0 ? "정상" : "보완 필요"}</span>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {checks.map((check) => (
+          <a
+            aria-label={`${check.label} ${check.ok ? "정상" : "보완 필요"} ${check.detail}`}
+            className="group flex min-h-[4.5rem] items-center gap-3 rounded-[22px] bg-[var(--wallet-surface-tint)] px-3 py-3 transition hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98]"
+            href={check.href}
+            key={check.label}
+          >
+            <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${check.ok ? "bg-[var(--wallet-mint-soft)] text-[#0c7d67]" : "bg-[var(--wallet-warning-soft)] text-[#8a5b08]"}`}>
+              {check.ok ? <CheckCircle2 aria-hidden="true" size={19} /> : <AlertCircle aria-hidden="true" size={19} />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <strong className="block text-sm font-black text-[var(--wallet-ink)]">{check.label}</strong>
+              <span className="mt-0.5 block truncate text-xs font-bold text-[var(--wallet-muted)]">{check.detail}</span>
+            </span>
+            <ArrowRight aria-hidden="true" className="shrink-0 text-[var(--wallet-muted)] transition-transform group-hover:translate-x-0.5" size={16} />
+          </a>
         ))}
       </div>
     </section>
@@ -705,6 +773,8 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
             </div>
 
             <StarterChecklist scenario={scenario} />
+
+            <CalculationCheckPanel input={input} scenario={scenario} />
 
             <section className="flex items-start gap-3 rounded-[22px] bg-[var(--wallet-mint-soft)] p-4 text-sm font-semibold leading-6 text-[#246f62]" aria-label="계산 안내"><ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={19} />계좌 잔액과 대출 원금은 각각 합산하며, 순자산은 자산보다 부채가 많으면 음수로 표시합니다. 전망에는 대출 원금과 이자, 상환 방식, 월 적자까지 반영됩니다.</section>
           </>
