@@ -36,19 +36,19 @@ export function AppShell({ children }: AppShellProps) {
         본문으로 건너뛰기
       </a>
 
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/70 bg-[#fbfcff]/88 backdrop-blur-xl">
         <div className="mx-auto flex h-[3.75rem] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[15px] font-black text-[var(--wallet-ink)]">
               <span
-                className="flex h-9 w-9 items-center justify-center rounded-[16px] bg-[var(--wallet-primary)] text-base font-black text-white shadow-[0_10px_22px_rgba(0,100,255,0.24)]"
+                className="flex h-9 w-9 items-center justify-center rounded-[16px] bg-[linear-gradient(145deg,#1463ff,#0050d8)] text-base font-black text-white shadow-[0_10px_22px_rgba(0,100,255,0.24)]"
                 data-testid="brand-mark"
               >
                 M
               </span>
               <span className="leading-none">
                 <span className="block">MillionMoa</span>
-                <span className="mt-1 hidden text-[11px] font-bold text-[var(--wallet-muted)] sm:block">첫 월급 돈관리</span>
+                <span className="mt-1 hidden text-[11px] font-bold text-[var(--wallet-muted)] sm:block">첫 월급 머니 홈</span>
               </span>
             </Link>
           </div>
