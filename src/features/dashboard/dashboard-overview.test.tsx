@@ -363,12 +363,18 @@ describe("DashboardOverview", () => {
     window.history.replaceState(null, "", "#planner-cash-flow");
     render(<DashboardOverview />);
 
+    const salaryPresets = await screen.findByRole("region", { name: "월수입 빠른 시작" });
+    expect(within(salaryPresets).getByRole("link", { name: "정확히 계산" })).toHaveAttribute("href", "#finance-calculators");
+    await user.click(within(salaryPresets).getByRole("button", { name: /초봉 350/ }));
+
+    expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("350");
+    expect(within(salaryPresets).getByRole("button", { name: /초봉 350/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
     await user.click(screen.getByRole("button", { name: "월 수입에 100만원 더하기" }));
     await user.click(screen.getByRole("button", { name: "월 수입에서 50만원 빼기" }));
 
-    expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("470");
-    expect(screen.getByText("2,414,465원")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "월 수입" })).toHaveValue("500");
+    expect(screen.getByText("2,714,465원")).toBeInTheDocument();
   });
 
   it("hydrates from the saved owner scenario without showing a fallback notice", async () => {
