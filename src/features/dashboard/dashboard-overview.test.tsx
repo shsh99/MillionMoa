@@ -150,21 +150,26 @@ describe("DashboardOverview", () => {
     window.history.replaceState(null, "", "#finance-calculators");
     render(<DashboardOverview />);
 
+    const calculatorWorkspace = await screen.findByRole("region", { name: "계산 작업공간" });
+    expect(within(calculatorWorkspace).getByRole("heading", { name: "필요한 계산만 하나씩" })).toBeInTheDocument();
+    expect(within(calculatorWorkspace).getByText("월수입 320만원")).toBeInTheDocument();
+    expect(within(calculatorWorkspace).getByRole("link", { name: "월수입이 다르면 현금흐름에서 바로 수정" })).toHaveAttribute("href", "#planner-cash-flow");
+    expect(within(calculatorWorkspace).getByRole("link", { name: "청년 적금·ISA 혜택은 상품 탭에서 비교" })).toHaveAttribute("href", "#finance-products");
     expect(await screen.findByRole("region", { name: "내 월급 실수령액" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "세액공제 환급 후보" })).not.toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "내 월급 실수령액" })).toHaveFocus());
-    const salaryTab = screen.getByRole("tab", { name: "실수령액" });
+    await waitFor(() => expect(screen.getByRole("heading", { name: "필요한 계산만 하나씩" })).toHaveFocus());
+    const salaryTab = screen.getByRole("tab", { name: /실수령액/ });
     salaryTab.focus();
     await user.keyboard("{ArrowRight}");
 
     expect(screen.getByRole("heading", { name: "세액공제 환급 후보" })).toBeVisible();
     expect(screen.queryByRole("region", { name: "내 월급 실수령액" })).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "연말정산" })).toHaveFocus();
-    expect(screen.getByRole("tabpanel", { name: "연말정산" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: /연말정산/ })).toHaveFocus();
+    expect(screen.getByRole("tabpanel", { name: /연말정산/ })).toBeVisible();
 
-    await user.click(screen.getByRole("tab", { name: "실수령액" }));
-    expect(screen.getByRole("tabpanel", { name: "실수령액" })).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: /실수령액/ }));
+    expect(screen.getByRole("tabpanel", { name: /실수령액/ })).toBeVisible();
   });
 
   it("keeps salary input values when switching calculators", async () => {
@@ -175,8 +180,8 @@ describe("DashboardOverview", () => {
     const grossSalary = await screen.findByRole("textbox", { name: "월 세전 급여" });
     await user.clear(grossSalary);
     await user.type(grossSalary, "999");
-    await user.click(screen.getByRole("tab", { name: "연말정산" }));
-    await user.click(screen.getByRole("tab", { name: "실수령액" }));
+    await user.click(screen.getByRole("tab", { name: /연말정산/ }));
+    await user.click(screen.getByRole("tab", { name: /실수령액/ }));
 
     expect(screen.getByRole("textbox", { name: "월 세전 급여" })).toHaveValue("999");
   });
