@@ -142,6 +142,35 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
   const nonTaxableInvalidMessage = nonTaxable.status === "invalid" ? "비과세 항목 금액과 자녀 수는 0 이상의 정수로 입력하세요." : null;
   const canApplyResult = Boolean(estimatedResult) && !nonTaxableInvalidMessage && (incomeTaxBeforeReduction > 0 || zeroIncomeTaxConfirmed);
   const reductionMessage = reduction && reduction.status !== "eligible-estimate" ? SME_REDUCTION_MESSAGES[reduction.reason] : null;
+  const isAppliedToPlan = Boolean(estimatedResult) && estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome;
+  const sourceStatus = incomeTaxBeforeReduction > 0
+    ? incomeTaxProvenance === "official-table" ? "홈택스 입력" : "명세서 입력"
+    : zeroIncomeTaxConfirmed ? "0원 확인" : "소득세 필요";
+  const workflowSteps = [
+    {
+      label: "급여",
+      value: formatCurrency(grossPay),
+      status: grossPay > 0 ? "입력됨" : "필요",
+      tone: grossPay > 0 ? "blue" : "amber",
+    },
+    {
+      label: "소득세",
+      value: sourceStatus,
+      status: incomeTaxBeforeReduction > 0 || zeroIncomeTaxConfirmed ? "확인됨" : "대기",
+      tone: incomeTaxBeforeReduction > 0 || zeroIncomeTaxConfirmed ? "mint" : "amber",
+    },
+    {
+      label: "계획 반영",
+      value: isAppliedToPlan ? "현재 계획과 일치" : estimatedResult ? "적용 전" : "계산 필요",
+      status: isAppliedToPlan ? "완료" : "다음",
+      tone: isAppliedToPlan ? "mint" : "blue",
+    },
+  ] as const;
+  const workflowToneClass = {
+    blue: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    mint: "bg-[var(--wallet-mint-soft)] text-[#0c7d67]",
+    amber: "bg-[var(--wallet-warning-soft)] text-[#8a5b08]",
+  };
 
   const deductionRows = [
     ["국민연금", estimatedResult?.deductions.nationalPension ?? 0],
@@ -172,6 +201,23 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
           <div><p className="text-xs font-extrabold text-[var(--wallet-primary-strong)]">2026 급여 도구</p><h2 id="net-salary-title" className="mt-1 text-xl font-black text-[var(--wallet-ink)]">내 월급 실수령액</h2><p className="mt-1 text-sm font-semibold text-[var(--wallet-muted)]">급여명세서와 맞춰 보고 계획에 바로 연결해요.</p></div>
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-[var(--wallet-primary-strong)]"><ReceiptText aria-hidden="true" size={22} /></span>
         </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+          <span className="rounded-full bg-white px-3 py-2 text-[var(--wallet-primary-strong)]">공식 요율 자동</span>
+          <span className={`rounded-full px-3 py-2 ${workflowToneClass[incomeTaxBeforeReduction > 0 || zeroIncomeTaxConfirmed ? "mint" : "amber"]}`}>{sourceStatus}</span>
+          <span className={`rounded-full px-3 py-2 ${workflowToneClass[isAppliedToPlan ? "mint" : "blue"]}`}>{isAppliedToPlan ? "계획 반영 완료" : "계획 반영 전"}</span>
+        </div>
+        <section aria-label="실수령액 계산 순서" className="mt-4 grid gap-2 sm:grid-cols-3">
+          {workflowSteps.map((step, index) => (
+            <div className="min-w-0 rounded-[20px] bg-white/82 p-3 shadow-sm" key={step.label}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--wallet-surface-tint)] text-xs font-black text-[var(--wallet-muted)]">{index + 1}</span>
+                <span className={`rounded-full px-2 py-1 text-[11px] font-black ${workflowToneClass[step.tone]}`}>{step.status}</span>
+              </div>
+              <p className="mt-2 text-xs font-bold text-[var(--wallet-muted)]">{step.label}</p>
+              <strong className="mt-1 block truncate text-sm font-black tabular-nums text-[var(--wallet-ink)]">{step.value}</strong>
+            </div>
+          ))}
+        </section>
       </div>
 
       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.82fr)]">
@@ -286,7 +332,7 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
           </div>
           <div className="mt-5 flex justify-between border-t border-white/15 pt-4 text-sm font-bold"><span className="text-[#d7eee7]">총 공제</span><span>{formatCurrency(estimatedResult?.deductions.total ?? 0)}</span></div>
           {estimatedResult && <ul className="mt-5 space-y-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-[#d7eee7]">{estimatedResult.assumptions.map((assumption) => <li key={assumption}>- {assumption}</li>)}<li>- 적용하면 이 브라우저의 내 계획 월 수입으로 저장됩니다.</li></ul>}
-          <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!canApplyResult || estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome} onClick={() => { if (!estimatedResult || !canApplyResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{estimatedResult?.estimatedMonthlyTakeHomePay === currentMonthlyIncome ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
+          <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#8ee0c8] px-4 text-sm font-black text-[#253e39] enabled:hover:bg-[#a3ead5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-white" disabled={!canApplyResult || isAppliedToPlan} onClick={() => { if (!estimatedResult || !canApplyResult) return; onApply(estimatedResult.estimatedMonthlyTakeHomePay); setAppliedNotice(`${formatCurrency(estimatedResult.estimatedMonthlyTakeHomePay)}을 이 기기의 내 계획 월 수입으로 저장했어요.`); }} type="button"><ShieldCheck aria-hidden="true" size={18} />{isAppliedToPlan ? "현재 계획에 반영됨" : "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용"}</button>
           {appliedNotice && <p aria-live="polite" className="mt-3 text-center text-xs font-bold text-[#8ee0c8]">{appliedNotice}</p>}
         </aside>
       </div>
