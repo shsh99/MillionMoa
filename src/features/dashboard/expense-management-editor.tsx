@@ -300,7 +300,7 @@ export function ExpenseManagementEditor({ value, onChange }: Props) {
           <div aria-label={`${kinds.find((entry) => entry.id === kind)?.label} 빠른 추가`} className="mb-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
             {presetTemplates[kind].map((preset) => (
               <button
-                className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-3 py-2 text-left transition hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] px-3 py-2 text-left transition-[background-color,border-color] hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
                 key={preset.name}
                 onClick={() => addPresetItem(preset)}
                 type="button"

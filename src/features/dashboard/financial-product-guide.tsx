@@ -281,7 +281,7 @@ export function FinancialProductGuide() {
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {presets[activeProduct].map((preset) => (
               <button
-                className="min-h-[4.75rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wallet-primary)]"
+                className="min-h-[4.75rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left shadow-sm transition-[background-color,border-color,transform] hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wallet-primary)]"
                 key={preset.label}
                 onClick={preset.onApply}
                 type="button"

@@ -189,7 +189,7 @@ export function NetSalaryCalculator({ currentMonthlyIncome, onApply }: NetSalary
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {salaryPresets.map((preset) => (
                 <button
-                  className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left transition hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
+                  className="min-h-[4.25rem] rounded-2xl border border-[var(--wallet-line)] bg-white px-3 py-2 text-left transition-[background-color,border-color,transform] hover:border-[var(--wallet-primary)] hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)]"
                   key={preset.label}
                   onClick={() => applySalaryPreset(preset)}
                   type="button"

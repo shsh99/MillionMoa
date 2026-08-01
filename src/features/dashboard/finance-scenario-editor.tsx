@@ -156,7 +156,7 @@ function PresetButton({
   return (
     <button
       aria-label={`${label} 빠른 설정`}
-      className="min-h-16 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] active:translate-y-0"
+      className="min-h-16 rounded-2xl border border-[var(--wallet-line)] bg-[var(--wallet-surface)] px-3 py-2 text-left shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--wallet-primary)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wallet-primary)] active:translate-y-0"
       onClick={onClick}
       type="button"
     >

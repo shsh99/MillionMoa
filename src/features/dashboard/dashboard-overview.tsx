@@ -433,7 +433,7 @@ function CalculationCheckPanel({
         {checks.map((check) => (
           <a
             aria-label={`${check.label} ${check.ok ? "정상" : "보완 필요"} ${check.detail}`}
-            className="group flex min-h-[4.5rem] items-center gap-3 rounded-[22px] bg-[var(--wallet-surface-tint)] px-3 py-3 transition hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98]"
+            className="group flex min-h-[4.5rem] items-center gap-3 rounded-[22px] bg-[var(--wallet-surface-tint)] px-3 py-3 transition-[background-color,transform] hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98]"
             href={check.href}
             key={check.label}
           >
