@@ -600,6 +600,49 @@ function MoneyWorkspaceNextStep({ activeWorkspace, scenario }: { activeWorkspace
   );
 }
 
+const starterSalaryPresets = [
+  { label: "초봉 250", amount: 2_500_000, detail: "월 250만원" },
+  { label: "초봉 300", amount: 3_000_000, detail: "월 300만원" },
+  { label: "초봉 350", amount: 3_500_000, detail: "월 350만원" },
+  { label: "초봉 400", amount: 4_000_000, detail: "월 400만원" },
+] as const;
+
+function SalaryPresetStrip({ currentMonthlyIncome, onSelect }: { currentMonthlyIncome: number; onSelect: (monthlyIncome: number) => void }) {
+  return (
+    <section aria-label="월수입 빠른 시작" className="rounded-[24px] bg-[var(--wallet-surface-tint)] p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold text-[var(--wallet-ink)]">월급 대략값으로 시작</p>
+          <p className="mt-0.5 text-xs font-semibold text-[var(--wallet-muted)]">나중에 실수령액 계산기로 정확히 맞출 수 있어요.</p>
+        </div>
+        <a className="w-fit rounded-full bg-white px-3 py-2 text-xs font-black text-[var(--wallet-primary-strong)] hover:bg-[var(--wallet-primary-soft)]" href="#finance-calculators">정확히 계산</a>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {starterSalaryPresets.map((preset) => {
+          const selected = currentMonthlyIncome === preset.amount;
+
+          return (
+            <button
+              aria-pressed={selected}
+              className={`min-h-14 rounded-[18px] border px-3 text-left transition-[background-color,border-color,transform] active:scale-[0.98] ${
+                selected
+                  ? "border-[var(--wallet-primary)] bg-white text-[var(--wallet-primary-strong)] shadow-sm"
+                  : "border-transparent bg-white/70 text-[var(--wallet-muted)] hover:bg-white hover:text-[var(--wallet-ink)]"
+              }`}
+              key={preset.amount}
+              onClick={() => onSelect(preset.amount)}
+              type="button"
+            >
+              <span className="block text-sm font-black">{preset.label}</span>
+              <span className="mt-0.5 block text-xs font-bold tabular-nums">{preset.detail}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function InputWorkspaceSummary({
   input,
   scenario,
@@ -1001,7 +1044,10 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
                 <div className="mb-4"><h2 id="cash-flow-editor-title" className="text-lg font-extrabold text-[var(--wallet-ink)]">월 현금흐름</h2></div>
                 {hydrated ? (
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)]">
-                    <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} quickAmountMode="adjust" quickAmountsManwon={[10, 50, 100]} />
+                    <div className="grid gap-3">
+                      <SalaryPresetStrip currentMonthlyIncome={input.monthlyIncome} onSelect={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} />
+                      <MoneyInput id="monthly-income" label="월 수입" value={input.monthlyIncome} onChange={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} quickAmountMode="adjust" quickAmountsManwon={[10, 50, 100]} />
+                    </div>
                     <div className="flex min-h-28 flex-col justify-center border-t border-[var(--wallet-line)] py-4 sm:border-l sm:border-t-0 sm:pl-5">
                       <p className="text-sm font-bold text-[var(--wallet-muted)]">항목별 월 지출</p>
                       <p className="mt-2 text-2xl font-extrabold tabular-nums text-[var(--wallet-ink)]">{formatCurrency(scenario.monthlyNonLoanExpense)}</p>
