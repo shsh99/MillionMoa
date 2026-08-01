@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CheckCircle2, CreditCard, Landmark, ListChecks, PiggyBank, RotateCcw, Save, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from "react";
+import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpFromLine, Building2, Calculator, ChartNoAxesCombined, CheckCircle2, CreditCard, Landmark, ListChecks, PiggyBank, ReceiptText, RotateCcw, Save, ShieldCheck, Sparkles, Target, WalletCards } from "lucide-react";
 import { MoneyInput } from "../../components/money-input";
 import { ExpenseManagementEditor } from "./expense-management-editor";
 import { FinanceScenarioEditor } from "./finance-scenario-editor";
@@ -25,6 +25,7 @@ const goalAmount = 100_000_000;
 export const localFinanceScenarioOwner = "local-demo-profile";
 type DashboardCategory = "overview" | "input" | "calculators" | "products" | "insights";
 type MoneyWorkspace = "cash-flow" | "expenses" | "assets" | "loans";
+type CalculatorTool = "salary" | "year-end";
 type SaveStatus = "saved" | "dirty" | "failed";
 
 function buildSaveStatusView(saveStatus: SaveStatus, savedAt: string | null = null) {
@@ -707,6 +708,106 @@ function CategoryNavigator({ activeCategory }: { activeCategory: DashboardCatego
   );
 }
 
+function CalculatorWorkspaceSelector({
+  activeCalculator,
+  onSelect,
+  onKeyDown,
+  scenario,
+  tabRefs,
+}: {
+  activeCalculator: CalculatorTool;
+  onSelect: (calculator: CalculatorTool) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, current: CalculatorTool) => void;
+  scenario: ReturnType<typeof calculateFinanceScenario>;
+  tabRefs: MutableRefObject<Record<CalculatorTool, HTMLButtonElement | null>>;
+}) {
+  const tools: Array<{
+    id: CalculatorTool;
+    label: string;
+    detail: string;
+    resultHint: string;
+    badge: string;
+    icon: ReactNode;
+    tone: "blue" | "mint";
+  }> = [
+    {
+      id: "salary",
+      label: "실수령액",
+      detail: "세전 급여와 소득세를 맞춰 월수입에 반영",
+      resultHint: scenario.monthlyIncome > 0 ? `현재 계획 ${formatShortMoney(scenario.monthlyIncome)}` : "월급 입력 필요",
+      badge: scenario.monthlyIncome > 0 ? "먼저 확인" : "추천",
+      icon: <ReceiptText aria-hidden="true" size={21} strokeWidth={1.9} />,
+      tone: "blue",
+    },
+    {
+      id: "year-end",
+      label: "연말정산",
+      detail: "세액공제와 환급 후보를 월 여유금과 비교",
+      resultHint: scenario.rawMonthlySurplus < 0 ? "적자 먼저 점검" : `월 여유 ${formatShortMoney(scenario.rawMonthlySurplus)}`,
+      badge: scenario.rawMonthlySurplus > 0 ? "절세 점검" : "계획 보완",
+      icon: <ShieldCheck aria-hidden="true" size={21} strokeWidth={1.9} />,
+      tone: "mint",
+    },
+  ];
+  const toneClass = {
+    blue: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    mint: "bg-[var(--wallet-mint-soft)] text-[#0c7d67]",
+  };
+
+  return (
+    <section aria-label="계산 작업공간" className="rounded-[30px] border border-[#e9edf5] bg-white p-4 shadow-[0_18px_46px_rgba(28,38,58,0.08)] sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-[var(--wallet-primary)]">계산 작업공간</p>
+          <h2 id="finance-calculator-workspace-title" className="mt-1 text-xl font-extrabold text-[var(--wallet-ink)]">필요한 계산만 하나씩</h2>
+          <p className="mt-1 text-sm font-medium leading-6 text-[var(--wallet-muted)]">월급, 세액공제, 환급 후보를 분리해서 입력 부담을 줄였어요.</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-extrabold">
+          <span className="rounded-full bg-[var(--wallet-surface-tint)] px-3 py-2 text-[var(--wallet-muted)]">월수입 {formatShortMoney(scenario.monthlyIncome)}</span>
+          <span className={`rounded-full px-3 py-2 ${scenario.rawMonthlySurplus < 0 ? "bg-[var(--wallet-coral-soft)] text-[var(--wallet-coral)]" : "bg-[var(--wallet-mint-soft)] text-[#0c7d67]"}`}>월여유 {formatShortMoney(scenario.rawMonthlySurplus)}</span>
+        </div>
+      </div>
+      <div aria-label="계산기 선택" className="mt-4 grid gap-2 sm:grid-cols-2" role="tablist">
+        {tools.map((tool) => {
+          const selected = activeCalculator === tool.id;
+
+          return (
+            <button
+              aria-controls={`${tool.id}-calculator-panel`}
+              aria-selected={selected}
+              className={`group min-h-[6.75rem] rounded-[24px] border p-3 text-left transition-[background-color,border-color,transform] active:scale-[0.98] ${
+                selected
+                  ? "border-[var(--wallet-primary)] bg-[var(--wallet-primary-soft)] shadow-[0_14px_30px_rgba(0,100,255,0.12)]"
+                  : "border-[var(--wallet-line)] bg-[var(--wallet-surface-tint)] hover:border-[var(--wallet-primary-soft)] hover:bg-white"
+              }`}
+              id={`${tool.id}-calculator-tab`}
+              key={tool.id}
+              onClick={() => onSelect(tool.id)}
+              onKeyDown={(event) => onKeyDown(event, tool.id)}
+              ref={(node) => { tabRefs.current[tool.id] = node; }}
+              role="tab"
+              tabIndex={selected ? 0 : -1}
+              type="button"
+            >
+              <span className="flex items-start justify-between gap-3">
+                <span className={`grid size-11 shrink-0 place-items-center rounded-[18px] ${toneClass[tool.tone]}`}>{tool.icon}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${selected ? "bg-white text-[var(--wallet-primary-strong)]" : toneClass[tool.tone]}`}>{tool.badge}</span>
+              </span>
+              <span className="mt-3 block text-base font-extrabold text-[var(--wallet-ink)]">{tool.label}</span>
+              <span className="mt-1 block text-xs font-semibold leading-5 text-[var(--wallet-muted)]">{tool.detail}</span>
+              <span className="mt-2 block text-xs font-black tabular-nums text-[var(--wallet-primary-strong)]">{tool.resultHint}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 grid gap-2 text-xs font-bold text-[var(--wallet-muted)] sm:grid-cols-2">
+        <a className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-3 hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)]" href="#planner-cash-flow">월수입이 다르면 현금흐름에서 바로 수정</a>
+        <a className="rounded-2xl bg-[var(--wallet-surface-tint)] px-3 py-3 hover:bg-[var(--wallet-primary-soft)] hover:text-[var(--wallet-primary-strong)]" href="#finance-products">청년 적금·ISA 혜택은 상품 탭에서 비교</a>
+      </div>
+    </section>
+  );
+}
+
 export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [input, setInput] = useState(initialFinanceScenario);
   const [hydrated, setHydrated] = useState(false);
@@ -716,17 +817,17 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
   const [activeCategory, setActiveCategory] = useState<DashboardCategory>("overview");
   const [activeHash, setActiveHash] = useState("");
   const [activeMoneyWorkspace, setActiveMoneyWorkspace] = useState<MoneyWorkspace>("cash-flow");
-  const [activeCalculator, setActiveCalculator] = useState<"salary" | "year-end">("salary");
+  const [activeCalculator, setActiveCalculator] = useState<CalculatorTool>("salary");
   const inputRef = useRef(initialFinanceScenario);
-  const calculatorTabRefs = useRef<{ salary: HTMLButtonElement | null; "year-end": HTMLButtonElement | null }>({ salary: null, "year-end": null });
+  const calculatorTabRefs = useRef<Record<CalculatorTool, HTMLButtonElement | null>>({ salary: null, "year-end": null });
 
-  const activateCalculatorTab = (next: "salary" | "year-end") => {
+  const activateCalculatorTab = (next: CalculatorTool) => {
     setActiveCalculator(next);
     window.requestAnimationFrame(() => calculatorTabRefs.current[next]?.focus());
   };
 
-  const handleCalculatorTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: "salary" | "year-end") => {
-    let next: "salary" | "year-end" | null = null;
+  const handleCalculatorTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: CalculatorTool) => {
+    let next: CalculatorTool | null = null;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") next = current === "salary" ? "year-end" : "salary";
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = current === "salary" ? "year-end" : "salary";
     if (event.key === "Home") next = "salary";
@@ -948,10 +1049,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           <div className="scroll-mt-36" id="finance-calculators">
             {hydrated ? (
               <div className="grid gap-4">
-                <div aria-label="계산기 선택" className="grid grid-cols-2 gap-1 rounded-[18px] border border-[var(--wallet-line)] bg-[var(--wallet-surface)] p-1.5 shadow-[var(--wallet-shadow)]" role="tablist">
-                  <button aria-controls="salary-calculator-panel" aria-selected={activeCalculator === "salary"} className={`min-h-12 rounded-[14px] px-3 text-sm font-extrabold transition-colors ${activeCalculator === "salary" ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]" : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)]"}`} id="salary-calculator-tab" onClick={() => setActiveCalculator("salary")} onKeyDown={(event) => handleCalculatorTabKeyDown(event, "salary")} ref={(node) => { calculatorTabRefs.current.salary = node; }} role="tab" tabIndex={activeCalculator === "salary" ? 0 : -1} type="button">실수령액</button>
-                  <button aria-controls="year-end-calculator-panel" aria-selected={activeCalculator === "year-end"} className={`min-h-12 rounded-[14px] px-3 text-sm font-extrabold transition-colors ${activeCalculator === "year-end" ? "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]" : "text-[var(--wallet-muted)] hover:bg-[var(--wallet-surface-tint)]"}`} id="year-end-calculator-tab" onClick={() => setActiveCalculator("year-end")} onKeyDown={(event) => handleCalculatorTabKeyDown(event, "year-end")} ref={(node) => { calculatorTabRefs.current["year-end"] = node; }} role="tab" tabIndex={activeCalculator === "year-end" ? 0 : -1} type="button">연말정산</button>
-                </div>
+                <CalculatorWorkspaceSelector activeCalculator={activeCalculator} onKeyDown={handleCalculatorTabKeyDown} onSelect={setActiveCalculator} scenario={scenario} tabRefs={calculatorTabRefs} />
                 <div aria-labelledby="salary-calculator-tab" hidden={activeCalculator !== "salary"} id="salary-calculator-panel" role="tabpanel"><NetSalaryCalculator currentMonthlyIncome={input.monthlyIncome} onApply={(monthlyIncome) => updateInput((current) => ({ ...current, monthlyIncome }))} /></div>
                 <div aria-labelledby="year-end-calculator-tab" hidden={activeCalculator !== "year-end"} id="year-end-calculator-panel" role="tabpanel"><YearEndTaxCalculator currentMonthlySurplus={scenario.rawMonthlySurplus} /></div>
               </div>
