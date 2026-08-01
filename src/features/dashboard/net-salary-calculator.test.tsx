@@ -14,6 +14,13 @@ describe("NetSalaryCalculator", () => {
     render(<NetSalaryCalculator currentMonthlyIncome={3_200_000} onApply={onApply} />);
 
     expect(screen.getByRole("region", { name: "내 월급 실수령액" })).toHaveClass("border-[var(--wallet-line)]");
+    const workflow = screen.getByRole("region", { name: "실수령액 계산 순서" });
+    expect(within(workflow).getByText("급여")).toBeInTheDocument();
+    expect(within(workflow).getByText("소득세")).toBeInTheDocument();
+    expect(within(workflow).getByText("계획 반영")).toBeInTheDocument();
+    expect(screen.getByText("공식 요율 자동")).toBeInTheDocument();
+    expect(screen.getAllByText("소득세 필요").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("계획 반영 전")).toBeInTheDocument();
     expect(screen.getByRole("complementary")).toHaveClass("bg-[#17352d]");
     expect(screen.getByRole("complementary")).not.toHaveClass("bg-[#2f2950]");
     expect(screen.getByRole("button", { name: "계산한 실수령액을 이 기기에 저장되는 내 계획의 월 수입으로 적용" })).toBeDisabled();
@@ -40,6 +47,7 @@ describe("NetSalaryCalculator", () => {
 
     expect(screen.getByRole("textbox", { name: "월 세전 급여" })).toHaveValue("280");
     expect(screen.getByRole("textbox", { name: "월 소득세" })).toHaveValue("3");
+    expect(screen.getAllByText("명세서 입력").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows a lower income tax and higher take-home pay for confirmed youth reduction", async () => {
