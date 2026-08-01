@@ -55,6 +55,7 @@ describe("DashboardOverview", () => {
     expect(screen.getByText("학자금 대출")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /실수령액 확인/ })).toHaveAttribute("href", "#finance-calculators");
     expect(screen.getByRole("link", { name: /고정비 점검/ })).toHaveAttribute("href", "#expense-management");
+    expect(screen.getByRole("link", { name: /비상금 확인/ })).toHaveAttribute("href", "#finance-assets");
     expect(screen.getByRole("link", { name: /상품/ })).toHaveAttribute("href", "#finance-products");
     expect(screen.getByTestId("overview-net-worth")).toHaveTextContent("7,000,000원");
     expect(screen.getByRole("region", { name: "자산 요약" })).toHaveClass(
@@ -282,6 +283,9 @@ describe("DashboardOverview", () => {
     render(<DashboardOverview />);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "자산 계좌" })).toHaveFocus());
+    expect(screen.getByTestId("money-workspace-header")).toHaveClass("top-[4.75rem]");
+    const nextStep = screen.getByRole("region", { name: "입력 다음 단계" });
+    expect(within(nextStep).getByRole("link", { name: /대출이 있으면 따로 등록하세요/ })).toHaveAttribute("href", "#finance-loans-input");
     const inputSummary = screen.getByRole("region", { name: "입력 요약" });
     expect(inputSummary).toBeInTheDocument();
     expect(within(inputSummary).getByRole("link", { name: /총 자산/ })).toHaveAttribute("href", "#finance-assets");
@@ -299,6 +303,7 @@ describe("DashboardOverview", () => {
     });
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "대출 관리" })).toHaveFocus());
+    expect(within(screen.getByRole("region", { name: "입력 다음 단계" })).getByRole("link", { name: /입력이 끝나면 그래프로 확인하세요/ })).toHaveAttribute("href", "#finance-loans");
     expect(screen.getByRole("button", { name: "대출 추가" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "자산 계좌 추가" })).not.toBeInTheDocument();
   });

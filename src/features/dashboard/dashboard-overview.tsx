@@ -174,14 +174,14 @@ function buildStarterActions(scenario: ReturnType<typeof calculateFinanceScenari
     {
       label: "비상금 확인",
       detail: `현재 자산 기준 약 ${emergencyMonths.toFixed(1)}개월 버틸 수 있음`,
-      href: "#finance-accounts",
+      href: "#finance-assets",
       tone: "blue",
       icon: <ShieldCheck size={18} strokeWidth={1.9} />,
     },
     {
       label: loanRatio > 0.12 ? "대출 부담 점검" : "적금·계좌 점검",
       detail: loanRatio > 0.12 ? `월수입의 ${Math.round(loanRatio * 100)}%가 대출 납입` : "여유금이 어느 계좌로 가는지 확인",
-      href: loanRatio > 0.12 ? "#finance-loans" : "#finance-accounts",
+      href: loanRatio > 0.12 ? "#finance-loans" : "#finance-assets",
       tone: "lilac",
       icon: <PiggyBank size={18} strokeWidth={1.9} />,
     },
@@ -309,7 +309,7 @@ function FinancialAccountSnapshot({ input }: { input: FinanceScenarioInput }) {
           <p className="text-xs font-bold text-[var(--wallet-primary)]">보유 중인 돈</p>
           <h2 className="mt-1 text-lg font-black text-[var(--wallet-ink)]" id="account-snapshot-title">계좌와 대출</h2>
         </div>
-        <a className="text-xs font-extrabold text-[var(--wallet-primary)] hover:underline" href="#finance-accounts">전체 관리</a>
+        <a className="text-xs font-extrabold text-[var(--wallet-primary)] hover:underline" href="#finance-assets">전체 관리</a>
       </div>
       <div className="mt-4 divide-y divide-[var(--wallet-line)]">
         {input.assets.map((asset) => (
@@ -516,7 +516,7 @@ function MoneyWorkspaceHeader({
   const saveView = buildSaveStatusView(saveStatus, savedAt);
 
   return (
-    <div className="sticky top-3 z-10 rounded-[24px] border border-[var(--wallet-line)] bg-white/95 px-4 py-3 shadow-[0_12px_28px_rgba(31,41,55,0.08)] backdrop-blur supports-[not(backdrop-filter:blur(1px))]:bg-white">
+    <div className="sticky top-[4.75rem] z-10 rounded-[24px] border border-[var(--wallet-line)] bg-white/95 px-4 py-3 shadow-[0_12px_28px_rgba(31,41,55,0.08)] backdrop-blur supports-[not(backdrop-filter:blur(1px))]:bg-white" data-testid="money-workspace-header">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold text-[var(--wallet-primary)]">입력 작업공간</p>
@@ -543,6 +543,59 @@ function MoneyWorkspaceHeader({
         </div>
       </div>
     </div>
+  );
+}
+
+function MoneyWorkspaceNextStep({ activeWorkspace, scenario }: { activeWorkspace: MoneyWorkspace; scenario: ReturnType<typeof calculateFinanceScenario> }) {
+  const nextStep = {
+    "cash-flow": {
+      label: "월급을 넣었으면 지출을 정리하세요",
+      detail: `현재 항목별 지출은 월 ${formatShortMoney(scenario.monthlyNonLoanExpense)}입니다.`,
+      href: "#expense-management",
+      action: "지출 정리",
+      icon: <ListChecks aria-hidden="true" size={19} strokeWidth={1.9} />,
+      toneClass: "bg-[var(--wallet-primary-soft)] text-[var(--wallet-primary-strong)]",
+    },
+    expenses: {
+      label: "지출 다음은 계좌 잔액입니다",
+      detail: "파킹통장, 적금, 주택청약을 나눠 넣으면 순자산 계산이 정확해집니다.",
+      href: "#finance-assets",
+      action: "계좌 입력",
+      icon: <Landmark aria-hidden="true" size={19} strokeWidth={1.9} />,
+      toneClass: "bg-[var(--wallet-mint-soft)] text-[#0c7d67]",
+    },
+    assets: {
+      label: "대출이 있으면 따로 등록하세요",
+      detail: "대출 원금과 이자 납입액은 순자산과 목표 시점에 따로 반영됩니다.",
+      href: "#finance-loans-input",
+      action: "대출 입력",
+      icon: <Building2 aria-hidden="true" size={19} strokeWidth={1.9} />,
+      toneClass: "bg-[var(--wallet-warning-soft)] text-[#8a5b08]",
+    },
+    loans: {
+      label: "입력이 끝나면 그래프로 확인하세요",
+      detail: `상환 후 월 여유금은 ${formatShortMoney(scenario.rawMonthlySurplus)}입니다.`,
+      href: "#finance-loans",
+      action: "전망 보기",
+      icon: <ChartNoAxesCombined aria-hidden="true" size={19} strokeWidth={1.9} />,
+      toneClass: "bg-[#f0edff] text-[#5146aa]",
+    },
+  }[activeWorkspace];
+
+  return (
+    <section aria-label="입력 다음 단계" className="rounded-[26px] border border-white bg-white p-3 shadow-[0_16px_38px_rgba(28,38,58,0.07)]">
+      <a className="group flex min-h-[5.25rem] items-center gap-3 rounded-[22px] bg-[var(--wallet-surface-tint)] px-3 py-3 transition-[background-color,transform] hover:bg-[var(--wallet-primary-soft)] active:scale-[0.98]" href={nextStep.href}>
+        <span className={`grid size-12 shrink-0 place-items-center rounded-[18px] ${nextStep.toneClass}`}>{nextStep.icon}</span>
+        <span className="min-w-0 flex-1">
+          <strong className="block break-keep text-sm font-black text-[var(--wallet-ink)]">{nextStep.label}</strong>
+          <span className="mt-1 block text-xs font-bold leading-5 text-[var(--wallet-muted)]">{nextStep.detail}</span>
+        </span>
+        <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-black text-[var(--wallet-primary-strong)] shadow-sm sm:inline-flex">
+          {nextStep.action}<ArrowRight aria-hidden="true" size={14} />
+        </span>
+        <ArrowRight aria-hidden="true" className="shrink-0 text-[var(--wallet-muted)] transition-transform group-hover:translate-x-0.5 sm:hidden" size={17} />
+      </a>
+    </section>
   );
 }
 
@@ -808,7 +861,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
                   <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm"><span className="font-bold text-[var(--wallet-muted)]">{isNetWorthNegative ? "부채 초과" : "목표까지"} <strong className="ml-1 font-black text-[var(--wallet-ink)]">{isNetWorthNegative ? formatShortMoney(Math.abs(scenario.netWorth)) : formatShortMoney(remainingAmount)}</strong></span><span className="font-bold text-[var(--wallet-muted)]">예상 <strong className="ml-1 font-black text-[var(--wallet-primary-strong)]" data-testid="overview-goal-months">{formatExpectedMonth(monthsToGoal, referenceDate)}</strong></span></div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 sm:flex">
-                  <a className="inline-flex min-h-12 items-center justify-center rounded-[18px] bg-[var(--wallet-primary)] px-4 text-sm font-black text-white shadow-[0_12px_22px_rgba(0,100,255,0.22)] active:scale-[0.98]" href="#finance-accounts">자산 입력</a>
+                  <a className="inline-flex min-h-12 items-center justify-center rounded-[18px] bg-[var(--wallet-primary)] px-4 text-sm font-black text-white shadow-[0_12px_22px_rgba(0,100,255,0.22)] active:scale-[0.98]" href="#finance-assets">자산 입력</a>
                   <a className="inline-flex min-h-12 items-center justify-center rounded-[18px] bg-[var(--wallet-primary-soft)] px-4 text-sm font-black text-[var(--wallet-primary-strong)] active:scale-[0.98]" href="#finance-loans">전망 보기</a>
                 </div>
               </div>
@@ -839,6 +892,7 @@ export function DashboardOverview({ referenceDate }: { referenceDate?: Date }) {
           <div className="grid gap-4">
             <MoneyWorkspaceNavigator activeWorkspace={activeMoneyWorkspace} />
             <MoneyWorkspaceHeader activeWorkspace={activeMoneyWorkspace} onRetry={retryPersistInput} onSave={saveCurrentInput} savedAt={savedAt} saveStatus={saveStatus} />
+            <MoneyWorkspaceNextStep activeWorkspace={activeMoneyWorkspace} scenario={scenario} />
             {hydrated ? <InputWorkspaceSummary input={input} scenario={scenario} saveStatus={saveStatus} /> : null}
 
             {activeMoneyWorkspace === "cash-flow" && (

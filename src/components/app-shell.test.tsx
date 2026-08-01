@@ -90,7 +90,7 @@ describe("AppShell", () => {
     );
 
     act(() => {
-      window.history.replaceState(null, "", "#finance-accounts");
+      window.history.replaceState(null, "", "#finance-assets");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
 
